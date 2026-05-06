@@ -195,7 +195,7 @@ export default function Home() {
       setComputing(true);
       try {
         const result = await runWorkerCommand<any>('QUANTIFY_ET', { model, targetId: selectedEventTreeId });
-        setResult(selectedEventTreeId, result);
+        setResult(selectedEventTreeId!, result);
         setViewMode('results');
       } catch (e) {
         setError(e instanceof Error ? e.message : 'ET Quantification failed');
@@ -212,7 +212,7 @@ export default function Home() {
 
       try {
         const result = await runWorkerCommand<any>('QUANTIFY_FT', { model, targetId: selectedFaultTreeId });
-        setResult(selectedFaultTreeId, result);
+        setResult(selectedFaultTreeId!, result);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Quantification failed');
       } finally {
