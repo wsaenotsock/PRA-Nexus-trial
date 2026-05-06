@@ -505,7 +505,7 @@ export default function EventTreeCanvas({
             if (!selectedEventTreeId) return;
             setComputing(true);
             try {
-              const result = await runWorkerCommand('QUANTIFY_ET', { model, targetId: selectedEventTreeId });
+              const result = await runWorkerCommand<any>('QUANTIFY_ET', { model, targetId: selectedEventTreeId });
               setResult(selectedEventTreeId, result);
               if (onQuantifySuccess) onQuantifySuccess();
             } catch (e) {

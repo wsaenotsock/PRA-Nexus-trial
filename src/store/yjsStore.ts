@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import * as Y from 'yjs';
+// @ts-ignore
 import { WebsocketProvider } from 'y-websocket';
 import { useModelStore } from './modelStore';
 import type { PRAModel } from '@/lib/types';
@@ -22,6 +23,7 @@ export interface YjsState {
 
 export const useYjsStore = create<YjsState>((set, get) => {
   let doc: Y.Doc | null = null;
+  // @ts-ignore
   let provider: WebsocketProvider | null = null;
   let yMap: Y.Map<string> | null = null;
   
@@ -72,7 +74,7 @@ export const useYjsStore = create<YjsState>((set, get) => {
       
       provider.awareness.on('change', () => {
         const users = Array.from(provider!.awareness.getStates().values())
-          .map(state => state.user)
+          .map((state: any) => state.user)
           .filter(Boolean) as YjsUser[];
         set({ users });
       });

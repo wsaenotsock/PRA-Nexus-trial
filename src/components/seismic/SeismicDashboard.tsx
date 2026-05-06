@@ -18,14 +18,14 @@ export default function SeismicDashboard({ locale = 'ja' }: SeismicDashboardProp
   const selectedFaultTreeId = useModelStore((s) => s.selectedFaultTreeId);
   const updateBasicEvent = useModelStore((s) => s.updateBasicEvent);
   
-  const results = useResultsStore((s) => s.result);
+  const results = useResultsStore((s) => s.results);
   const setResults = useResultsStore((s) => s.setResult);
   const setComputing = useResultsStore((s) => s.setComputing);
 
   const [activeTab, setActiveTab] = useState<'hazard' | 'fragility' | 'mapping' | 'settings' | 'results'>('hazard');
   const [selectedPoint, setSelectedPoint] = useState<SeismicPointResult | null>(null);
 
-  const seismicResult = results?.seismicResult;
+  const seismicResult = results['seismic']?.seismicResult;
   const seismicSettings = model.seismicSettings;
   const updateSeismicSettings = useModelStore((s) => s.updateSeismicSettings);
 
@@ -38,7 +38,7 @@ export default function SeismicDashboard({ locale = 'ja' }: SeismicDashboardProp
     setComputing(true);
     try {
       const res = await runWorkerCommand<any>('QUANTIFY_SEISMIC', { model });
-      setResults(res);
+      setResults('seismic', res);
       setSelectedPoint(null);
       setActiveTab('results');
     } catch (e) {
@@ -87,7 +87,9 @@ export default function SeismicDashboard({ locale = 'ja' }: SeismicDashboardProp
     if (point && be.seismicFragilityId) {
       const fragility = model.seismicFragilities.find(f => f.id === be.seismicFragilityId);
       if (fragility) {
-        const { am, betaR, betaU } = fragility;
+        const am = fragility.am ?? 1.0;
+        const betaR = fragility.betaR ?? 0.2;
+        const betaU = fragility.betaU ?? 0.2;
         const betaTot = Math.sqrt(betaR * betaR + betaU * betaU);
         const x = Math.log(point.pga / am) / betaTot;
         const erf = (val: number) => {
@@ -365,8 +367,8 @@ export default function SeismicDashboard({ locale = 'ja' }: SeismicDashboardProp
                           label={{ value: locale === 'ja' ? '頻度 (/yr)' : 'Frequency (/yr)', angle: -90, position: 'insideLeft', fill: 'var(--text-secondary)', fontSize: 11 }}
                         />
                         <Tooltip 
-                          formatter={(val: number) => [val.toExponential(4), locale === 'ja' ? '頻度' : 'Freq']}
-                          labelFormatter={(val: number) => `PGA: ${val}g`}
+                          formatter={(val: any) => [val.toExponential(4), locale === 'ja' ? '頻度' : 'Freq']}
+                          labelFormatter={(val: any) => `PGA: ${val}g`}
                           contentStyle={{ background: 'rgba(20, 20, 25, 0.95)', border: '1px solid var(--border-default)', borderRadius: '8px' }}
                         />
                         <Line data={seismicResult.uncertaintyResult.fractileCurves[0].curve} type="monotone" dataKey="contribution" name="Mean" stroke="var(--accent-red)" strokeWidth={2} dot={false} />
@@ -397,8 +399,8 @@ export default function SeismicDashboard({ locale = 'ja' }: SeismicDashboardProp
                           label={{ value: locale === 'ja' ? '相対頻度' : 'Rel. Freq', angle: -90, position: 'insideLeft', fill: 'var(--text-secondary)', fontSize: 11 }}
                         />
                         <Tooltip 
-                          formatter={(val: number) => [val.toFixed(3), locale === 'ja' ? '確率密度' : 'Density']}
-                          labelFormatter={(val: number) => `${locale === 'ja' ? '頻度' : 'Freq'}: ${val.toExponential(2)}`}
+                          formatter={(val: any) => [val.toFixed(3), locale === 'ja' ? '確率密度' : 'Density']}
+                          labelFormatter={(val: any) => `${locale === 'ja' ? '頻度' : 'Freq'}: ${val.toExponential(2)}`}
                           contentStyle={{ background: 'rgba(20, 20, 25, 0.95)', border: '1px solid var(--border-default)', borderRadius: '8px' }}
                         />
                         <Bar dataKey="probability" fill="var(--accent-primary)" radius={[2, 2, 0, 0]} opacity={0.6} />

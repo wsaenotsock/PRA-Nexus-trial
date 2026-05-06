@@ -188,6 +188,7 @@ export default function Home() {
   // Run BDD/ET quantification via Worker
   const handleQuantify = useCallback(async () => {
     if (viewMode === 'et_editor') {
+      if (!selectedEventTreeId) return;
       const et = model.eventTrees?.find((t) => t.id === selectedEventTreeId);
       if (!et) return;
 
@@ -202,6 +203,7 @@ export default function Home() {
         setComputing(false);
       }
     } else {
+      if (!selectedFaultTreeId) return;
       const ft = model.faultTrees?.find((t) => t.id === selectedFaultTreeId);
       if (!ft) return;
 

@@ -234,7 +234,6 @@ export default function FragilityTable({ locale = 'ja' }: FragilityTableProps) {
                                   type="number"
                                   className="form-input form-input--sm form-input--mono"
                                   style={{ 
-                                    width: 'auto', 
                                     minWidth: '80px',
                                     maxWidth: '180px',
                                     // Dynamically estimate width based on character count

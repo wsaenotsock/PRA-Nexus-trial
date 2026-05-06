@@ -362,7 +362,7 @@ export default function HazardEditor({ locale = 'ja' }: HazardEditorProps) {
                       />
                       <Tooltip 
                         contentStyle={{ background: 'var(--bg-primary)', border: '1px solid var(--border-default)', fontSize: '12px' }}
-                        formatter={(value: any, name: string) => {
+                        formatter={(value: any, name: any) => {
                           const fractile = selectedHazard.fractiles.find(f => f.id === name);
                           return [value.toExponential(3), fractile?.name || name];
                         }}

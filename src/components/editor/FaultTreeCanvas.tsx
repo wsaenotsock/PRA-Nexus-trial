@@ -31,7 +31,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ftNodeTypes } from '@/components/editor/nodes/FTNode';
 import { useModelStore } from '@/store/modelStore';
 import { useResultsStore, runWorkerCommand } from '@/store/resultsStore';
-import type { FTNodeData, FTNodeType, BasicEvent } from '@/lib/types';
+import type { FTNodeData, FTNodeType, BasicEvent, GateType } from '@/lib/types';
 
 interface FaultTreeCanvasProps {
   onNodeSelect: (nodeId: string | null, nodeType: string | null) => void;
@@ -864,7 +864,7 @@ export default function FaultTreeCanvas({
               if (!selectedFaultTreeId) return;
               setComputing(true);
               try {
-                const result = await runWorkerCommand('QUANTIFY_FT', { model, targetId: selectedFaultTreeId });
+                const result = await runWorkerCommand<any>('QUANTIFY_FT', { model, targetId: selectedFaultTreeId });
                 setResult(selectedFaultTreeId, result);
                 if (onQuantifySuccess) onQuantifySuccess();
               } catch (e) {

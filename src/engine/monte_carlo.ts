@@ -117,12 +117,12 @@ function sampleDistribution(baseValue: number, dist: Distribution, u?: number): 
 
   switch (dist.type) {
     case 'lognormal': {
-  const ef = Math.max(1.0001, dist.errorFactor || 3);
-  const sigma = Math.log(ef) / 1.645;
-  const mu = Math.log(median);
-  const z = useInv ? normInv(u!) : randNormal();
-  return Math.exp(mu + sigma * z);
-}
+      const ef = Math.max(1.0001, dist.errorFactor || 3);
+      const sigma = Math.log(ef) / 1.645;
+      const mu = Math.log(baseValue);
+      const z = useInv ? normInv(u!) : randNormal();
+      return Math.exp(mu + sigma * z);
+    }
 case 'normal': {
   const mu = baseValue;
   const sigma = dist.stdDev !== undefined ? Math.max(1e-20, dist.stdDev) : (Math.abs(mu) * 0.1);

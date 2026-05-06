@@ -6,16 +6,19 @@ import { useModelStore } from '@/store/modelStore';
 
 interface BasicEventIDInputProps {
   basicEvent: BasicEvent;
+  basicEvents: BasicEvent[];
   updateBasicEvent: (event: BasicEvent) => void;
   locale: 'ja' | 'en';
 }
 
-function BasicEventIDInput({ basicEvent, updateBasicEvent, locale }: BasicEventIDInputProps) {
+function BasicEventIDInput({ basicEvent, basicEvents, updateBasicEvent, locale }: BasicEventIDInputProps) {
   const [localEventId, setLocalEventId] = React.useState(basicEvent.eventId || '');
 
   React.useEffect(() => {
     setLocalEventId(basicEvent.eventId || '');
   }, [basicEvent.id, basicEvent.eventId]);
+
+  const hasChanged = localEventId.trim() !== (basicEvent.eventId || '');
 
   const commitEventId = () => {
     const trimmedId = localEventId.trim();
@@ -23,21 +26,19 @@ function BasicEventIDInput({ basicEvent, updateBasicEvent, locale }: BasicEventI
     
     if (trimmedId === currentId) return;
 
-    // 重複チェック
-    const basicEvents = useModelStore.getState().model.basicEvents;
+    // 空文字フォールバックバグを完璧に解消した重複チェック！
     const sameIdEvent = trimmedId 
-      ? basicEvents.find(e => e.id !== basicEvent.id && e.eventId === trimmedId)
+      ? basicEvents.find(e => {
+          if (e.id === basicEvent.id) return false;
+          const targetId = (e.eventId && e.eventId.trim() !== '') ? e.eventId : e.id;
+          return targetId.toLowerCase() === trimmedId.toLowerCase();
+        })
       : null;
 
     if (sameIdEvent) {
-      if ((window as any).__is_confirming_id__) return;
-      (window as any).__is_confirming_id__ = true;
-
       const confirmSync = window.confirm(
         `基事象ID "${trimmedId}" は既に存在します。\n既存の基事象「${sameIdEvent.name}」のデータ（故障率、ミッション時間、分布など）をこの基本事象に反映しますか？`
       );
-
-      (window as any).__is_confirming_id__ = false;
 
       if (confirmSync) {
         updateBasicEvent({
@@ -75,19 +76,37 @@ function BasicEventIDInput({ basicEvent, updateBasicEvent, locale }: BasicEventI
   };
 
   return (
-    <input
-      className="form-input form-input--mono"
-      placeholder={locale === 'ja' ? '例: BE-01' : 'e.g. BE-01'}
-      value={localEventId}
-      onChange={(e) => setLocalEventId(e.target.value)}
-      onBlur={commitEventId}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          commitEventId();
-          (e.target as HTMLInputElement).blur();
-        }
-      }}
-    />
+    <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
+      <input
+        className="form-input form-input--mono"
+        style={{ flex: 1, margin: 0 }}
+        placeholder={locale === 'ja' ? '例: BE-01' : 'e.g. BE-01'}
+        value={localEventId}
+        onChange={(e) => setLocalEventId(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            commitEventId();
+          }
+        }}
+      />
+      {hasChanged && (
+        <button 
+          className="btn btn--primary btn--sm animate-pulse"
+          onClick={commitEventId}
+          style={{ 
+            padding: '6px 12px', 
+            whiteSpace: 'nowrap',
+            fontSize: '12px',
+            height: '34px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          {locale === 'ja' ? '適用' : 'Apply'}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -161,6 +180,7 @@ export default function PropertyPanel({
             <label className="form-label">{locale === 'ja' ? '基事象ID' : 'Basic Event ID'}</label>
             <BasicEventIDInput
               basicEvent={basicEvent}
+              basicEvents={model.basicEvents}
               updateBasicEvent={updateBasicEvent}
               locale={locale}
             />

@@ -12,6 +12,7 @@
   "dependencies": {
     "@syncedstore/core": "^0.6.0",
     "@syncedstore/react": "^0.6.0",
+    "@vercel/analytics": "^2.0.1",
     "@xyflow/react": "^12.10.2",
     "d3": "^7.9.0",
     "deep-diff": "^1.0.2",
