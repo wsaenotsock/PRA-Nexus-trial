@@ -1,0 +1,39 @@
+{
+  "name": "pra-nexus",
+  "version": "0.1.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "ws-server": "npx cross-env PORT=1234 y-websocket-server"
+  },
+  "dependencies": {
+    "@syncedstore/core": "^0.6.0",
+    "@syncedstore/react": "^0.6.0",
+    "@xyflow/react": "^12.10.2",
+    "d3": "^7.9.0",
+    "deep-diff": "^1.0.2",
+    "html-to-image": "^1.11.13",
+    "next": "16.2.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "recharts": "^3.8.1",
+    "uuid": "^10.0.0",
+    "y-protocols": "^1.0.7",
+    "y-websocket": "^1.5.0",
+    "yjs": "^13.6.30",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@types/d3": "^7.4.3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/uuid": "^10.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.4",
+    "typescript": "^5"
+  }
+}

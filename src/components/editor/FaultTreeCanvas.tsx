@@ -1,0 +1,924 @@
+'use client';
+
+import React, { useCallback, useRef, useMemo, useState } from 'react';
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  addEdge,
+  useNodesState,
+  useEdgesState,
+  applyEdgeChanges,
+  applyNodeChanges,
+  type Connection,
+  type Edge,
+  type Node,
+  type EdgeChange,
+  type NodeChange,
+  type OnEdgesChange,
+  type OnNodesChange,
+  BackgroundVariant,
+  type ReactFlowInstance,
+  Panel,
+  type OnConnect,
+  useViewport,
+  useReactFlow,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import { toSvg } from 'html-to-image';
+import { v4 as uuidv4 } from 'uuid';
+import { ftNodeTypes } from '@/components/editor/nodes/FTNode';
+import { useModelStore } from '@/store/modelStore';
+import { useResultsStore, runWorkerCommand } from '@/store/resultsStore';
+import type { FTNodeData, FTNodeType, BasicEvent } from '@/lib/types';
+
+interface FaultTreeCanvasProps {
+  onNodeSelect: (nodeId: string | null, nodeType: string | null) => void;
+  onNodeDeleteRequest: (nodeId: string, nodeType: string) => void;
+  onEdgeDeleteRequest: (edges: Edge[]) => void;
+  onQuantifySuccess?: () => void;
+  locale?: 'ja' | 'en';
+}
+
+export default function FaultTreeCanvas({ 
+  onNodeSelect, 
+  onNodeDeleteRequest, 
+  onEdgeDeleteRequest,
+  onQuantifySuccess,
+  locale = 'ja' 
+}: FaultTreeCanvasProps) {
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const reactFlowInstance = useRef<ReactFlowInstance<Node<FTNodeData>, Edge> | null>(null);
+
+  const model = useModelStore((s) => s.model);
+  const selectedFaultTreeId = useModelStore((s) => s.selectedFaultTreeId);
+  const [isLocked, setIsLocked] = useState(false);
+  const addBasicEvent = useModelStore((s) => s.addBasicEvent);
+  const updateBasicEvent = useModelStore((s) => s.updateBasicEvent);
+  const selectFaultTree = useModelStore((s) => s.selectFaultTree);
+  const addGate = useModelStore((s) => s.addGate);
+  const updateGate = useModelStore((s) => s.updateGate);
+  const removeGate = useModelStore((s) => s.removeGate);
+  const removeBasicEvent = useModelStore((s) => s.removeBasicEvent);
+  const toggleGateCollapse = useModelStore((s) => s.toggleGateCollapse);
+  const autoLayout = useModelStore((s) => s.autoLayout);
+  const addChildToGate = useModelStore((s) => s.addChildToGate);
+  const removeChildFromGate = useModelStore((s) => s.removeChildFromGate);
+  const moveGateChild = useModelStore((s) => s.moveGateChild);
+
+  const setComputing = useResultsStore(s => s.setComputing);
+  const setResult = useResultsStore(s => s.setResult);
+  const setError = useResultsStore(s => s.setError);
+
+  const handleExportImage = async () => {
+    if (!reactFlowWrapper.current || !selectedFaultTreeId) return;
+    
+    const ft = model.faultTrees.find(t => t.id === selectedFaultTreeId);
+    const safeName = (ft?.name || 'fault-tree').replace(/[/\\?%*:|"<>]/g, '-').replace(/\s+/g, '_');
+    const filename = `${safeName}.svg`;
+
+    let fileHandle: any = null;
+
+    // Try to get file handle FIRST to preserve user gesture context
+    if ('showSaveFilePicker' in window) {
+      try {
+        fileHandle = await (window as any).showSaveFilePicker({
+          suggestedName: filename,
+          types: [{
+            description: 'SVG Image',
+            accept: { 'image/svg+xml': ['.svg'] },
+          }],
+        });
+      } catch (err: any) {
+        if (err.name === 'AbortError') return; // User cancelled
+        console.warn('showSaveFilePicker failed or was cancelled', err);
+      }
+    }
+
+    try {
+      // Temporarily hide UI elements during capture
+      const elementsToHide = reactFlowWrapper.current.querySelectorAll(
+        '.react-flow__controls, .react-flow__minimap, .react-flow__panel'
+      );
+      
+      elementsToHide.forEach((el) => {
+        (el as HTMLElement).style.setProperty('display', 'none', 'important');
+      });
+
+      const style = getComputedStyle(document.body);
+      const canvasBg = style.getPropertyValue('--bg-canvas').trim() || '#f1f5f9';
+
+      const dataUrl = await toSvg(reactFlowWrapper.current, {
+        backgroundColor: canvasBg,
+        style: {
+          background: canvasBg,
+        }
+      });
+
+      // Restore UI elements
+      elementsToHide.forEach((el) => {
+        (el as HTMLElement).style.removeProperty('display');
+      });
+
+      // Convert dataUrl to Blob robustly
+      const blobResponse = await fetch(dataUrl);
+      const svgBlob = await blobResponse.blob();
+
+      if (fileHandle) {
+        const writable = await fileHandle.createWritable();
+        await writable.write(svgBlob);
+        await writable.close();
+      } else {
+        // Fallback for browsers without File System Access API
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        alert(`書き出しを開始しました: ${filename}\nダウンロードフォルダを確認してください。`);
+      }
+    } catch (error) {
+      console.error('Failed to export SVG:', error);
+      alert('SVGの書き出しに失敗しました。詳細: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  };
+
+  const CustomControls = () => {
+    const { zoom, x, y } = useViewport();
+    const { setViewport, fitView, zoomIn, zoomOut } = useReactFlow();
+    
+    return (
+      <div style={{ 
+        display: 'flex', 
+        gap: '4px', 
+        padding: '4px', 
+        background: 'var(--bg-secondary)', 
+        border: '1px solid var(--border-default)', 
+        borderRadius: 'var(--radius-md)', 
+        boxShadow: 'var(--shadow-lg)',
+        alignItems: 'center',
+        zIndex: 10
+      }}>
+        <button className="btn btn--ghost btn--sm" style={{ padding: '4px 8px' }} onClick={() => zoomOut({ duration: 300 })} title={locale === 'ja' ? 'ズームアウト' : 'Zoom Out'}>−</button>
+        <div style={{ width: 45, textAlign: 'center', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+          {Math.round(zoom * 100)}%
+        </div>
+        <button className="btn btn--ghost btn--sm" style={{ padding: '4px 8px' }} onClick={() => zoomIn({ duration: 300 })} title={locale === 'ja' ? 'ズームイン' : 'Zoom In'}>+</button>
+        
+        <div style={{ width: '1px', height: '16px', background: 'var(--border-default)', margin: '0 4px' }} />
+        
+        <button 
+          className="btn btn--ghost btn--sm" 
+          onClick={() => setViewport({ x, y, zoom: 1 }, { duration: 400 })}
+          style={{ fontSize: '11px' }}
+          title={locale === 'ja' ? '100%にリセット' : 'Reset to 100%'}
+        >
+          Reset
+        </button>
+        
+        <button 
+          className="btn btn--ghost btn--sm" 
+          onClick={() => fitView({ duration: 400, padding: 0.2 })}
+          style={{ fontSize: '11px', color: 'var(--accent-blue)', fontWeight: 'bold' }}
+          title={locale === 'ja' ? '全体表示' : 'Fit to Screen'}
+        >
+          Fit
+        </button>
+
+        <div style={{ width: '1px', height: '16px', background: 'var(--border-default)', margin: '0 4px' }} />
+
+        <button 
+          className="btn btn--ghost btn--sm" 
+          onClick={() => setIsLocked(!isLocked)}
+          title={isLocked ? (locale === 'ja' ? 'ロック解除' : 'Unlock') : (locale === 'ja' ? '編集ロック' : 'Lock')}
+          style={{ 
+            fontSize: '14px', 
+            color: isLocked ? 'var(--accent-amber)' : 'var(--text-tertiary)',
+            minWidth: '32px'
+          }}
+        >
+          {isLocked ? '🔒' : '🔓'}
+        </button>
+      </div>
+    );
+  };
+
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, nodeId: string, nodeType: string } | null>(null);
+  const [dragOverNodeId, setDragOverNodeId] = useState<string | null>(null);
+
+  const { nodes, edges } = useMemo(() => {
+    const ft = model.faultTrees?.find((t) => t.id === selectedFaultTreeId);
+    if (!ft) return { nodes: [], edges: [] };
+
+    const nodes: Node<FTNodeData>[] = [];
+    const edges: Edge[] = [];
+    const processedNodes = new Set<string>();
+    const allChildIds = new Set(ft.gates.flatMap(g => g.children));
+    
+    // Also track all children across ALL fault trees to identify truly "unassigned" basic events
+    const allChildIdsGlobal = new Set(
+      model.faultTrees?.flatMap(t => t.gates).flatMap(g => g.children) || []
+    );
+
+    const processNode = (nodeId: string) => {
+      if (processedNodes.has(nodeId)) return;
+      processedNodes.add(nodeId);
+
+      const gate = ft.gates.find((g) => g.id === nodeId);
+      if (gate) {
+        const isTopGate = gate.id === ft.topGateId;
+        let flowNodeType: FTNodeType = 'andGate';
+        if (isTopGate) flowNodeType = 'topEvent';
+        else if (gate.type === 'OR') flowNodeType = 'orGate';
+        else if (gate.type === 'ATLEAST' || gate.type === 'VOTE') flowNodeType = 'atleastGate';
+        else if (gate.type === 'TRANSFER') flowNodeType = 'transferGate';
+        
+        nodes.push({
+          id: gate.id,
+          type: flowNodeType,
+          position: gate.position,
+          width: 200,
+          height: 120,
+          data: {
+            label: gate.name,
+            nodeType: flowNodeType,
+            gateType: gate.type,
+            k: gate.k,
+            collapsed: gate.collapsed,
+            isDropTarget: dragOverNodeId === gate.id,
+            id: gate.id,
+          },
+        });
+
+        if (gate.collapsed) return;
+
+        for (const childId of gate.children) {
+          edges.push({
+            id: `${gate.id}-${childId}`,
+            source: gate.id,
+            target: childId,
+            type: 'smoothstep',
+            interactionWidth: 20,
+            style: { stroke: 'var(--text-tertiary)', strokeWidth: 2 },
+          });
+          processNode(childId);
+        }
+      } else {
+        const be = model.basicEvents.find((e) => e.id === nodeId);
+        if (be) {
+          const resolvedNodeType = be.eventType || 'basicEvent';
+          const isCCF = (model.ccfGroups || []).some(g => g.members.includes(be.id));
+          const param = (model.parameters || []).find((p) => p.id === be.parameterId);
+          const parameterName = param ? param.name : undefined;
+          nodes.push({
+            id: be.id,
+            type: resolvedNodeType, // Pass the correct event type so FTNode renders the right shape
+            position: be.position || { x: 0, y: 0 },
+            width: 200,
+            height: 120,
+            data: {
+              label: be.name,
+              nodeType: resolvedNodeType,
+              eventId: be.eventId || be.id,
+              probability: be.probability ?? (be.failureRate * (be.missionTime ?? 24)),
+              failureType: be.failureType,
+              parameterId: be.parameterId,
+              parameterName,
+              isCCF,
+              isDropTarget: dragOverNodeId === be.id,
+              id: be.id,
+            },
+          });
+        }
+      }
+    };
+
+    // Start traversal from all root nodes (nodes that are not children of any gate)
+    // This handles the top event, orphaned trees, and truly isolated nodes in a single pass.
+    const roots = [
+      ...ft.gates.filter(g => !allChildIds.has(g.id)).map(g => g.id),
+      ...model.basicEvents.filter(be => !allChildIdsGlobal.has(be.id)).map(be => be.id)
+    ];
+
+    roots.forEach(rootId => processNode(rootId));
+
+    return { nodes, edges };
+  }, [selectedFaultTreeId, model, dragOverNodeId]);
+
+  const [nodesState, setNodes, onNodesChange] = useNodesState(nodes);
+  const [edgesState, setEdges, onEdgesChange] = useEdgesState(edges);
+
+  React.useEffect(() => {
+    setNodes(nodes);
+    setEdges((eds) => 
+      edges.map(newEdge => {
+        const existing = eds.find(e => e.id === newEdge.id);
+        return existing ? { ...newEdge, selected: existing.selected } : newEdge;
+      })
+    );
+    // Automatically fit view when switching fault trees
+    if (nodes.length > 0 && reactFlowInstance.current) {
+      const instance = reactFlowInstance.current;
+      setTimeout(() => instance.fitView({ duration: 600, padding: 0.2 }), 50);
+    }
+  }, [nodes, edges, setNodes, setEdges, selectedFaultTreeId]);
+
+  const onConnect: OnConnect = useCallback(
+    (params) => {
+      setEdges((eds) => addEdge({ 
+        ...params, 
+        type: 'smoothstep',
+        style: { stroke: 'var(--text-tertiary)', strokeWidth: 2 },
+      }, eds));
+      if (selectedFaultTreeId && params.source && params.target) {
+        const ft = model.faultTrees.find((t) => t.id === selectedFaultTreeId);
+        const parentGate = ft?.gates.find((g) => g.id === params.source);
+        if (parentGate && !parentGate.children.includes(params.target)) {
+          const updatedGate = { ...parentGate, children: [...parentGate.children, params.target] };
+          useModelStore.getState().updateGate(selectedFaultTreeId, updatedGate);
+        }
+      }
+    },
+    [setEdges, model, selectedFaultTreeId]
+  );
+
+  const onNodeClick = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      onNodeSelect(node.id, (node.data as FTNodeData).nodeType);
+    },
+    [onNodeSelect]
+  );
+
+  const onNodeDoubleClick = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      const data = node.data as FTNodeData;
+      const isGate = ['andGate', 'orGate', 'atleastGate', 'topEvent'].includes(data.nodeType);
+      if (selectedFaultTreeId && isGate) {
+        toggleGateCollapse(selectedFaultTreeId, node.id);
+      }
+    },
+    [selectedFaultTreeId, toggleGateCollapse]
+  );
+
+  const onEdgesDelete = useCallback(
+    (edgesToDelete: Edge[]) => {
+      if (!selectedFaultTreeId) return;
+      edgesToDelete.forEach((edge) => {
+        removeChildFromGate(selectedFaultTreeId, edge.source, edge.target);
+      });
+    },
+    [selectedFaultTreeId, removeChildFromGate]
+  );
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === 'Delete') {
+        const selectedEdges = edgesState.filter((e) => e.selected);
+        const selectedNodes = nodesState.filter((n) => n.selected);
+
+        // Node deletion is handled by the parent (page.tsx) with a confirmation modal
+        if (selectedNodes.length > 0) return;
+
+        // If only edges are selected, request confirmation from parent
+        if (selectedEdges.length > 0) {
+          onEdgeDeleteRequest(selectedEdges);
+        }
+      }
+    },
+    [edgesState, nodesState, onEdgeDeleteRequest]
+  );
+
+  const onNodeDragStop = useCallback(
+    (_: React.MouseEvent, node: Node) => {
+      // 1. Save position
+      if (!selectedFaultTreeId) return;
+      const ft = model.faultTrees?.find((t) => t.id === selectedFaultTreeId);
+      const gate = ft?.gates.find((g) => g.id === node.id);
+      if (gate) {
+        updateGate(selectedFaultTreeId, { ...gate, position: node.position });
+      } else {
+        const be = model.basicEvents.find((e) => e.id === node.id);
+        if (be) {
+          updateBasicEvent({ ...be, position: node.position });
+        }
+      }
+
+      // 2. Link to gate if dropped over one
+      if (dragOverNodeId && selectedFaultTreeId) {
+        const targetNode = nodes.find((n) => n.id === dragOverNodeId);
+        if (targetNode) {
+          addChildToGate(selectedFaultTreeId, dragOverNodeId, node.id);
+        }
+      }
+      setDragOverNodeId(null);
+    },
+    [selectedFaultTreeId, model, updateGate, updateBasicEvent, dragOverNodeId, nodes, addChildToGate]
+  );
+
+  const onInit = useCallback((instance: ReactFlowInstance<Node<FTNodeData>, Edge>) => {
+    reactFlowInstance.current = instance;
+  }, []);
+
+  const onPaneClick = useCallback(() => {
+    onNodeSelect(null, null);
+    setContextMenu(null);
+  }, [onNodeSelect]);
+
+  const onNodeContextMenu = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      event.preventDefault();
+      setContextMenu({
+        x: event.clientX,
+        y: event.clientY,
+        nodeId: node.id,
+        nodeType: node.type || (node.data.nodeType as string),
+      });
+    },
+    []
+  );
+
+  const handleAddChildBasicEvent = useCallback(() => {
+    if (!contextMenu || !selectedFaultTreeId) return;
+    const gateId = contextMenu.nodeId;
+    const faultTree = model.faultTrees.find((ft) => ft.id === selectedFaultTreeId);
+    const gate = faultTree?.gates.find((g) => g.id === gateId);
+    
+    if (gate) {
+      const newId = uuidv4();
+      const newEvent: BasicEvent = {
+        id: newId,
+        name: locale === 'ja' ? '新規基事象' : 'New Basic Event',
+        tags: [],
+        failureType: 'time',
+        failureRate: 1e-4,
+        probability: 1e-4,
+        missionTime: 24,
+        demands: 1,
+        distribution: { type: 'lognormal', mean: 1e-4, errorFactor: 3 },
+        source: '',
+        memo: '',
+        position: { x: gate.position.x, y: gate.position.y + 200 },
+      };
+      addBasicEvent(newEvent);
+
+      const updatedGate = { ...gate, children: [...gate.children, newId] };
+      updateGate(selectedFaultTreeId, updatedGate);
+    }
+    setContextMenu(null);
+  }, [contextMenu, selectedFaultTreeId, model, locale, addBasicEvent, updateGate]);
+
+  const handleDeleteNode = useCallback((nodeId: string, nodeType: string) => {
+    if (onNodeDeleteRequest) {
+      onNodeDeleteRequest(nodeId, nodeType);
+    }
+    setContextMenu(null);
+  }, [onNodeDeleteRequest]);
+
+  const handleCopyNode = useCallback((nodeId: string, nodeType: string) => {
+    if (!selectedFaultTreeId) return;
+    
+    const faultTree = model.faultTrees.find(ft => ft.id === selectedFaultTreeId);
+    if (!faultTree) return;
+
+    const newId = uuidv4();
+    
+    // Find parent to link the copy to the same parent
+    const parentGate = faultTree.gates.find(g => g.children.includes(nodeId));
+
+    if (['andGate', 'orGate', 'atleastGate', 'topEvent'].includes(nodeType)) {
+      const gate = faultTree.gates.find(g => g.id === nodeId);
+      if (gate) {
+        addGate(selectedFaultTreeId, {
+          ...gate,
+          id: newId,
+          name: `${gate.name} (Copy)`,
+          position: { x: gate.position.x + 50, y: gate.position.y + 50 },
+          children: [] 
+        });
+        
+        if (parentGate) {
+          updateGate(selectedFaultTreeId, {
+            ...parentGate,
+            children: [...parentGate.children, newId]
+          });
+        }
+      }
+    } else {
+      const be = model.basicEvents.find(e => e.id === nodeId);
+      if (be) {
+        addBasicEvent({
+          ...be,
+          id: newId,
+          name: `${be.name} (Copy)`,
+          position: be.position ? { x: be.position.x + 50, y: be.position.y + 50 } : { x: 50, y: 50 }
+        });
+
+        if (parentGate) {
+          updateGate(selectedFaultTreeId, {
+            ...parentGate,
+            children: [...parentGate.children, newId]
+          });
+        }
+      }
+    }
+    setContextMenu(null);
+  }, [selectedFaultTreeId, model, addGate, addBasicEvent, updateGate]);
+  
+  const handleMoveChild = useCallback((direction: 'left' | 'right') => {
+    if (!contextMenu || !selectedFaultTreeId) return;
+    const nodeId = contextMenu.nodeId;
+    const ft = model.faultTrees?.find(t => t.id === selectedFaultTreeId);
+    if (!ft) return;
+
+    const parentGate = ft.gates.find(g => g.children.includes(nodeId));
+    if (parentGate) {
+      moveGateChild(selectedFaultTreeId, parentGate.id, nodeId, direction);
+      // Re-run auto layout to show the change
+      setTimeout(() => autoLayout(selectedFaultTreeId), 50);
+    }
+    setContextMenu(null);
+  }, [contextMenu, selectedFaultTreeId, model, moveGateChild, autoLayout]);
+
+  const onNodeDrag = useCallback(
+    (event: React.MouseEvent, node: Node) => {
+      const elements = document.elementsFromPoint(event.clientX, event.clientY);
+      const targetNodeElement = elements.find(
+        (el) => el.classList.contains('react-flow__node') && el.getAttribute('data-id') !== node.id
+      );
+      const targetId = targetNodeElement?.getAttribute('data-id') || null;
+
+      // Only highlight if the target is a gate
+      const targetNode = nodes.find((n) => n.id === targetId);
+      const isGate = targetNode && ['andGate', 'orGate', 'atleastGate', 'topEvent'].includes(targetNode.data.nodeType);
+
+      setDragOverNodeId(isGate ? targetId : null);
+    },
+    [nodes]
+  );
+
+  const onDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    
+    // During native HTML5 drag-and-drop, standard React mouse events (like mouseEnter) 
+    // on child components may not fire reliably. 
+    // We determine the hovered node by checking the DOM element under the cursor.
+    const target = event.target as Element;
+    const nodeElement = target.closest('.react-flow__node');
+    const id = nodeElement?.getAttribute('data-id') || null;
+    
+    setDragOverNodeId((prev) => (prev !== id ? id : prev));
+  }, []);
+  const onDrop = useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      
+      const target = event.target as Element;
+      const nodeElement = target.closest('.react-flow__node');
+      const parentGateId = nodeElement?.getAttribute('data-id') || null;
+      
+      setDragOverNodeId(null);
+
+      const type = event.dataTransfer.getData('application/reactflow') as FTNodeType;
+      const position = reactFlowInstance.current?.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      }) || { x: 0, y: 0 };
+
+      if (!type || !selectedFaultTreeId) return;
+
+      const ft = model.faultTrees.find(t => t.id === selectedFaultTreeId);
+      if (!ft) return;
+
+      const newId = uuidv4();
+      
+      // Determine final position and connect if parent exists
+      let finalPosition = position;
+      if (parentGateId) {
+        const parentGate = ft.gates.find(g => g.id === parentGateId);
+        if (parentGate) {
+          finalPosition = { x: parentGate.position.x, y: parentGate.position.y + 150 };
+        }
+      }
+
+      // 1. Create the node
+      if (type === 'basicEvent') {
+        const newEvent: BasicEvent = {
+          id: newId,
+          name: locale === 'ja' ? '新規基事象' : 'New Basic Event',
+          eventType: 'basicEvent',
+          tags: [],
+          failureType: 'time',
+          failureRate: 1e-4,
+          probability: 1e-4,
+          missionTime: 24,
+          demands: 1,
+          distribution: { type: 'lognormal', mean: 1e-4, errorFactor: 3 },
+          source: '',
+          memo: '',
+          position: finalPosition,
+        };
+        addBasicEvent(newEvent);
+      } else if (type === 'andGate' || type === 'orGate' || type === 'atleastGate' || type === 'topEvent' || type === 'transferGate') {
+        const gateType: GateType = 
+          type === 'andGate' ? 'AND' : 
+          type === 'orGate' ? 'OR' : 
+          type === 'atleastGate' ? 'ATLEAST' : 
+          type === 'transferGate' ? 'TRANSFER' : 'AND';
+        
+        addGate(selectedFaultTreeId, {
+          id: newId,
+          name: type === 'transferGate' ? (locale === 'ja' ? '新規系統リンク' : 'New System Link') : (locale === 'ja' ? '新規ゲート' : 'New Gate'),
+          type: gateType,
+          children: [],
+          position: finalPosition,
+          k: type === 'atleastGate' ? 2 : undefined,
+        });
+      } else if (type === 'houseEvent' || type === 'undeveloped') {
+        const newEvent: BasicEvent = {
+          id: newId,
+          name: type === 'houseEvent' ? (locale === 'ja' ? 'ハウス事象' : 'House Event') : (locale === 'ja' ? '未展開事象' : 'Undeveloped Event'),
+          eventType: type,
+          tags: [],
+          failureType: 'time',
+          failureRate: 0,
+          probability: 0,
+          distribution: { type: 'point', mean: 0 },
+          source: '',
+          memo: '',
+          position: finalPosition,
+        };
+        addBasicEvent(newEvent);
+      }
+
+      // 2. Link to parent if dropped on a gate
+      if (parentGateId) {
+        const parentGate = ft.gates.find(g => g.id === parentGateId);
+        if (parentGate) {
+          updateGate(selectedFaultTreeId, { 
+            ...parentGate, 
+            children: [...parentGate.children, newId] 
+          });
+        }
+      }
+    },
+    [selectedFaultTreeId, addBasicEvent, addGate, updateGate, locale, dragOverNodeId, model]
+  );
+
+
+  if (!selectedFaultTreeId) {
+    return (
+      <div className="canvas-area">
+        <div className="empty-state" style={{ height: '100%' }}>
+          <div className="empty-state__icon">🌳</div>
+          <div className="empty-state__title">
+            {locale === 'ja' ? 'Fault Treeを選択' : 'Select a Fault Tree'}
+          </div>
+          <div className="empty-state__description">
+            {locale === 'ja' ? '左上のモデルリストからFTを選択してください' : 'Select an FT from the model list'}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="canvas-area" ref={reactFlowWrapper} tabIndex={0}>
+      {contextMenu && (
+        <div
+          style={{
+            position: 'fixed',
+            top: contextMenu.y,
+            left: contextMenu.x,
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border-default)',
+            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)',
+            borderRadius: 'var(--radius-md)',
+            zIndex: 1000,
+            padding: '4px 0',
+            minWidth: '150px'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {['andGate', 'orGate', 'atleastGate', 'topEvent'].includes(contextMenu.nodeType) && (
+            <button
+              className="context-menu-item"
+              style={{
+                width: '100%',
+                padding: '8px 16px',
+                textAlign: 'left',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+              onClick={handleAddChildBasicEvent}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
+              {locale === 'ja' ? '基事象を追加' : 'Add Basic Event'}
+            </button>
+          )}
+          <button
+            className="context-menu-item"
+            style={{
+              width: '100%',
+              padding: '8px 16px',
+              textAlign: 'left',
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-primary)',
+              fontSize: '13px',
+              cursor: 'pointer',
+            }}
+            onClick={() => handleCopyNode(contextMenu.nodeId, contextMenu.nodeType)}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          >
+            {locale === 'ja' ? 'コピー' : 'Copy'}
+          </button>
+          <button
+            className="context-menu-item"
+            style={{
+              width: '100%',
+              padding: '8px 16px',
+              textAlign: 'left',
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--accent-red)',
+              fontSize: '13px',
+              cursor: 'pointer',
+            }}
+            onClick={() => handleDeleteNode(contextMenu.nodeId, contextMenu.nodeType)}
+            onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+          >
+            {locale === 'ja' ? '削除' : 'Delete'}
+          </button>
+          
+          {/* Reordering */}
+          {contextMenu.nodeType !== 'topEvent' && (
+            <>
+              <div style={{ height: '1px', background: 'var(--border-default)', margin: '4px 0' }} />
+              <div style={{ padding: '4px 16px', fontSize: '10px', color: 'var(--text-tertiary)', fontWeight: 600 }}>
+                {locale === 'ja' ? '並び替え (オートレイアウト用)' : 'Reorder (for Auto Layout)'}
+              </div>
+              <button
+                className="context-menu-item"
+                style={{
+                  width: '100%',
+                  padding: '8px 16px',
+                  textAlign: 'left',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                }}
+                onClick={() => handleMoveChild('left')}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                ← {locale === 'ja' ? '左へ移動' : 'Move Left'}
+              </button>
+              <button
+                className="context-menu-item"
+                style={{
+                  width: '100%',
+                  padding: '8px 16px',
+                  textAlign: 'left',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                }}
+                onClick={() => handleMoveChild('right')}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                → {locale === 'ja' ? '右へ移動' : 'Move Right'}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+      <ReactFlow
+        nodes={nodesState}
+        edges={edgesState}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onNodeDrag={onNodeDrag}
+        onNodeDragStop={onNodeDragStop}
+        onEdgesDelete={onEdgesDelete}
+        onNodeContextMenu={onNodeContextMenu}
+        onPaneClick={onPaneClick}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+        onInit={onInit}
+        nodeTypes={ftNodeTypes as any}
+        deleteKeyCode={null}
+        onKeyDown={handleKeyDown}
+        proOptions={{ hideAttribution: true }}
+        nodesDraggable={!isLocked}
+        nodesConnectable={!isLocked}
+        elementsSelectable={!isLocked}
+      >
+        <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--text-muted)" />
+        <Panel position="bottom-left">
+          <CustomControls />
+        </Panel>
+        <MiniMap
+          position="bottom-right"
+          nodeColor={(n) => {
+            const nodeType = n.type || (n.data as any)?.nodeType;
+            if (nodeType === 'topEvent') return '#FF4757';
+            if (nodeType === 'andGate') return '#3B82F6';
+            if (nodeType === 'orGate') return '#A855F7';
+            if (nodeType === 'atleastGate') return '#6366F1';
+            if (['basicEvent', 'houseEvent', 'undeveloped', 'transferGate'].includes(nodeType)) {
+              return '#00D68F';
+            }
+            return '#94A3B8';
+          }}
+          maskColor="var(--bg-mask)"
+          maskStrokeColor="var(--accent-green)"
+          style={{ 
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-md)',
+            width: 200,
+            height: 150
+          }}
+        />
+        <Panel position="top-right" style={{ display: 'flex', gap: '8px' }}>
+          <button 
+            className="btn btn--primary btn--sm" 
+            onClick={async () => {
+              if (!selectedFaultTreeId) return;
+              setComputing(true);
+              try {
+                const result = await runWorkerCommand('QUANTIFY_FT', { model, targetId: selectedFaultTreeId });
+                setResult(selectedFaultTreeId, result);
+                if (onQuantifySuccess) onQuantifySuccess();
+              } catch (e) {
+                setError(e instanceof Error ? e.message : 'Quantification failed');
+              } finally {
+                setComputing(false);
+              }
+            }}
+            style={{ 
+              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+              padding: '6px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontWeight: 600
+            }}
+          >
+            <span style={{ fontSize: '14px' }}>⚛</span>
+            {locale === 'ja' ? '定量化実行' : 'Quantify'}
+          </button>
+          <button 
+            className="btn btn--secondary btn--sm" 
+            onClick={() => selectedFaultTreeId && autoLayout(selectedFaultTreeId)}
+            style={{ 
+              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-default)',
+              padding: '6px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <span style={{ fontSize: '14px' }}>✨</span>
+            {locale === 'ja' ? 'オートレイアウト' : 'Auto Layout'}
+          </button>
+          <button 
+            className="btn btn--secondary btn--sm" 
+            onClick={handleExportImage}
+            title={locale === 'ja' ? 'SVGとして保存' : 'Save as SVG'}
+            style={{ 
+              boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-default)',
+              padding: '6px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            📸 {locale === 'ja' ? 'SVGとして保存' : 'Save as SVG'}
+          </button>
+        </Panel>
+      </ReactFlow>
+    </div>
+  );
+}

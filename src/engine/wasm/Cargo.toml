@@ -1,0 +1,22 @@
+[package]
+name = "pra-nexus-wasm"
+version = "0.1.0"
+edition = "2021"
+description = "High-performance PRA quantification engine for PRA Nexus"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2.92"
+js-sys = "0.3.69"
+web-sys = { version = "0.3.69", features = ["console"] }
+rand = { version = "0.8.5", features = ["small_rng"] }
+rand_distr = "0.4.3"
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.6.5"
+hashbrown = "0.14.3"
+
+[profile.release]
+opt-level = "s"
+lto = true

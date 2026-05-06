@@ -1,0 +1,32 @@
+[
+  {
+    "version": 1,
+    "timestamp": "2026-05-04T15:30:38.523Z",
+    "author": "TestUser",
+    "message": "初期バージョン"
+  },
+  {
+    "version": 2,
+    "timestamp": "2026-05-04T15:32:30.480Z",
+    "author": "TestUser",
+    "message": "Initial State Test"
+  },
+  {
+    "version": 3,
+    "timestamp": "2026-05-04T15:34:06.301Z",
+    "author": "TestUser",
+    "message": "Parameter Change Test"
+  },
+  {
+    "version": 4,
+    "timestamp": "2026-05-04T16:14:53.076Z",
+    "author": "TestUser2",
+    "message": "FTいじった"
+  },
+  {
+    "version": 5,
+    "timestamp": "2026-05-04T17:24:17.357Z",
+    "author": "TestUser2432",
+    "message": "Verification Save"
+  }
+]

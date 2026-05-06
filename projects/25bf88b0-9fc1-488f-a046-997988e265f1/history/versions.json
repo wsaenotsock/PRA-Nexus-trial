@@ -1,0 +1,20 @@
+[
+  {
+    "version": 1,
+    "timestamp": "2026-05-04T15:41:22.769Z",
+    "author": "TestUser2",
+    "message": "初期バージョン"
+  },
+  {
+    "version": 2,
+    "timestamp": "2026-05-04T15:41:49.671Z",
+    "author": "TestUser2",
+    "message": "202605050041"
+  },
+  {
+    "version": 3,
+    "timestamp": "2026-05-04T15:47:59.754Z",
+    "author": "TestUser2",
+    "message": "FT"
+  }
+]

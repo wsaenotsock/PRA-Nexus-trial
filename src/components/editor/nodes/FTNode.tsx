@@ -1,0 +1,320 @@
+'use client';
+
+import React, { memo } from 'react';
+import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
+import type { FTNodeData } from '@/lib/types';
+
+// ===== AND Gate SVG Symbol =====
+function ANDGateSymbol() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+      <path
+        d="M 10 38 L 10 24 A 14 14 0 0 1 38 24 L 38 38 Z"
+        fill="rgba(59, 130, 246, 0.12)"
+        stroke="#3B82F6"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <text x="24" y="30" textAnchor="middle" fill="#3B82F6" fontSize="11" fontWeight="700" fontFamily="Inter, sans-serif">AND</text>
+    </svg>
+  );
+}
+
+// ===== OR Gate SVG Symbol =====
+function ORGateSymbol() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+      <path
+        d="M8 38C8 38 12 28 24 14C36 28 40 38 40 38C40 38 32 32 24 32C16 32 8 38 8 38Z"
+        fill="rgba(168, 85, 247, 0.12)"
+        stroke="#A855F7"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <text x="24" y="30" textAnchor="middle" fill="#A855F7" fontSize="11" fontWeight="700" fontFamily="Inter, sans-serif">OR</text>
+    </svg>
+  );
+}
+
+// ===== K-of-N Gate SVG Symbol =====
+function AtleastGateSymbol({ k }: { k?: number }) {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+      <path
+        d="M 10 38 L 10 24 A 14 14 0 0 1 38 24 L 38 38 Z"
+        fill="rgba(6, 182, 212, 0.12)"
+        stroke="#06B6D4"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <text x="24" y="30" textAnchor="middle" fill="#06B6D4" fontSize="10" fontWeight="700" fontFamily="Inter, sans-serif">{k ?? '?'}/N</text>
+    </svg>
+  );
+}
+
+// ===== Basic Event Symbol (Circle) =====
+function BasicEventSymbol({ failureType, hasParameter }: { failureType?: 'time' | 'demand'; hasParameter?: boolean }) {
+  let color = '#94A3B8'; // Fallback / Custom (No Parameter)
+  let bgColor = 'rgba(148, 163, 184, 0.12)';
+
+  if (hasParameter) {
+    if (failureType === 'demand') {
+      color = '#F97316'; // Amber Orange for Demand-based
+      bgColor = 'rgba(249, 115, 22, 0.12)';
+    } else {
+      color = '#00D68F'; // Emerald Green for Time-based
+      bgColor = 'rgba(0, 214, 143, 0.12)';
+    }
+  }
+
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+      <circle cx="24" cy="24" r="18" fill={bgColor} stroke={color} strokeWidth="2" />
+    </svg>
+  );
+}
+
+// ===== House Event Symbol =====
+function HouseEventSymbol() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+      <path
+        d="M24 8L40 22V40H8V22L24 8Z"
+        fill="rgba(255, 176, 32, 0.12)"
+        stroke="#FFB020"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// ===== Transfer Gate Symbol (Triangle) =====
+function TransferGateSymbol() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+      <path
+        d="M24 8L42 40H6L24 8Z"
+        fill="rgba(6, 182, 212, 0.12)"
+        stroke="#06B6D4"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// ===== Undeveloped Event Symbol (Diamond) =====
+function UndevelopedSymbol() {
+  return (
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+      <path
+        d="M24 6L42 24L24 42L6 24L24 6Z"
+        fill="rgba(255, 71, 87, 0.12)"
+        stroke="#FF4757"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+
+// ===== Gate Symbol Lookup =====
+function GateSymbol({ nodeType, gateType, k, failureType, hasParameter }: { nodeType: string; gateType?: string; k?: number; failureType?: 'time' | 'demand'; hasParameter?: boolean }) {
+  let resolvedType = nodeType;
+  if (nodeType === 'topEvent') {
+    if (gateType === 'AND') resolvedType = 'andGate';
+    else if (gateType === 'OR') resolvedType = 'orGate';
+    else if (gateType === 'ATLEAST') resolvedType = 'atleastGate';
+  }
+
+  switch (resolvedType) {
+    case 'andGate': return <ANDGateSymbol />;
+    case 'orGate': return <ORGateSymbol />;
+    case 'atleastGate': return <AtleastGateSymbol k={k} />;
+    case 'basicEvent': return <BasicEventSymbol failureType={failureType} hasParameter={hasParameter} />;
+    case 'houseEvent': return <HouseEventSymbol />;
+    case 'transferGate': return <TransferGateSymbol />;
+    case 'undeveloped': return <UndevelopedSymbol />;
+    case 'topEvent': return <ANDGateSymbol />; // fallback
+    default: return <BasicEventSymbol failureType={failureType} hasParameter={hasParameter} />;
+  }
+}
+
+// ===== Unified FT Node Component =====
+const FTNode = memo((props: any) => {
+  const { data, selected } = props;
+  const label = String(data.label || '');
+  const nodeType = String(data.nodeType || '');
+  const probability = data.probability;
+  const k = data.k;
+  const collapsed = !!data.collapsed;
+  const isGate = ['andGate', 'orGate', 'atleastGate', 'topEvent'].includes(nodeType);
+  const isDropTarget = !!data.isDropTarget;
+
+  return (
+    <div
+      className={`ft-node ${selected ? 'selected' : ''} ${isDropTarget ? 'ft-node--drop-target' : ''}`}
+    >
+      {nodeType === 'topEvent' && (
+        <div style={{
+          position: 'absolute',
+          top: -18,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'var(--bg-elevated)',
+          border: '1px solid var(--border-default)',
+          color: 'var(--text-tertiary)',
+          fontSize: '9px',
+          padding: '2px 8px',
+          borderRadius: '12px',
+          fontWeight: '600',
+          zIndex: 10,
+          whiteSpace: 'nowrap'
+        }}>
+          TOP
+        </div>
+      )}
+      {/* Input Handle (from parent gate) */}
+      {nodeType !== 'topEvent' && (
+        <Handle
+          type="target"
+          position={Position.Top}
+          style={{
+            background: 'var(--accent-green)',
+            width: 8,
+            height: 8,
+            top: -4,
+            border: 'none',
+          }}
+        />
+      )}
+
+      <div className="ft-node__gate-symbol">
+        <GateSymbol
+          nodeType={nodeType}
+          gateType={data.gateType as string}
+          k={k}
+          failureType={data.failureType as 'time' | 'demand'}
+          hasParameter={!!data.parameterId}
+        />
+      </div>
+
+      <div className="ft-node__label">{String(label)}</div>
+
+      {collapsed && (
+        <div style={{
+          position: 'absolute',
+          bottom: -8,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'var(--accent-amber)',
+          color: '#fff',
+          fontSize: '12px',
+          width: '18px',
+          height: '18px',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 'bold',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          zIndex: 20,
+          border: '2px solid var(--bg-elevated)'
+        }}>
+          +
+        </div>
+      )}
+
+      {/* 参照パラメータ名の表示 */}
+      {(data.parameterName || data.parameterId) && (
+        <div style={{
+          fontSize: '9px',
+          color: 'var(--accent-blue)',
+          fontWeight: '700',
+          marginTop: '2px',
+          textTransform: 'uppercase',
+          letterSpacing: '0.3px',
+          textAlign: 'center',
+          maxWidth: '180px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }} title={data.parameterName || data.parameterId}>
+          🔗 {data.parameterName || data.parameterId}
+        </div>
+      )}
+
+      {probability !== undefined && (
+        <div className="ft-node__probability" style={{ marginTop: (data.parameterName || data.parameterId) ? '1px' : '4px' }}>
+          {Number(probability).toExponential(2)}
+        </div>
+      )}
+
+      {/* CCF設定済みバッジの表示 */}
+      {!!data.isCCF && (
+        <div style={{
+          position: 'absolute',
+          top: 6,
+          right: 6,
+          background: 'var(--accent-red)',
+          color: '#fff',
+          fontSize: '8px',
+          fontWeight: 'bold',
+          padding: '2px 5px',
+          borderRadius: '4px',
+          boxShadow: 'var(--shadow-sm)',
+          zIndex: 10,
+          letterSpacing: '0.5px'
+        }}>
+          CCF
+        </div>
+      )}
+
+      {/* Output Handle (to children) */}
+      {isGate && (
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          style={{
+            background: 'var(--accent-green)',
+            width: 8,
+            height: 8,
+            bottom: -4,
+            border: 'none',
+          }}
+        />
+      )}
+
+      {/* Transfer gates also have output handle */}
+      {nodeType === 'transferGate' && (
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          style={{
+            background: 'var(--accent-cyan)',
+            width: 8,
+            height: 8,
+            bottom: -4,
+            border: 'none',
+          }}
+        />
+      )}
+    </div>
+  );
+});
+
+export default FTNode;
+
+// Export all node types for React Flow registration
+export const ftNodeTypes = {
+  andGate: FTNode,
+  orGate: FTNode,
+  atleastGate: FTNode,
+  basicEvent: FTNode,
+  houseEvent: FTNode,
+  transferGate: FTNode,
+  undeveloped: FTNode,
+  topEvent: FTNode,
+};
