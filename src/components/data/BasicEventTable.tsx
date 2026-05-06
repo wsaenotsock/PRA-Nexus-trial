@@ -89,6 +89,7 @@ export default function BasicEventTable({ locale = 'ja', highlightedId }: { loca
   const filteredEvents = model.basicEvents.filter((be) => 
     be.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     be.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (be.eventId && be.eventId.toLowerCase().includes(searchTerm.toLowerCase())) ||
     be.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
@@ -128,6 +129,7 @@ export default function BasicEventTable({ locale = 'ja', highlightedId }: { loca
           <thead>
             <tr>
               <th>ID</th>
+              <th>{locale === 'ja' ? '基事象ID' : 'Event ID'}</th>
               <th>{locale === 'ja' ? '名前' : 'Name'}</th>
               <th>{locale === 'ja' ? 'タグ' : 'Tags'}</th>
               <th>{locale === 'ja' ? '参照パラメータ' : 'Parameter'}</th>
@@ -155,6 +157,15 @@ export default function BasicEventTable({ locale = 'ja', highlightedId }: { loca
                 }}
               >
                 <td style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>{be.id.slice(0, 8)}</td>
+                <td>
+                  <input
+                    className="form-input form-input--mono"
+                    style={{ padding: '4px 8px', fontSize: '11px', background: 'transparent', width: '110px' }}
+                    value={be.eventId || ''}
+                    placeholder={locale === 'ja' ? '例: BE-01' : 'e.g. BE-01'}
+                    onChange={(e) => updateBasicEvent({ ...be, eventId: e.target.value })}
+                  />
+                </td>
                 <td>
                   <EditableNameCell 
                     be={be} 
@@ -384,7 +395,7 @@ export default function BasicEventTable({ locale = 'ja', highlightedId }: { loca
             ))}
             {filteredEvents.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--text-tertiary)' }}>
+                <td colSpan={12} style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--text-tertiary)' }}>
                   {locale === 'ja' ? 'データがありません' : 'No data available'}
                 </td>
               </tr>

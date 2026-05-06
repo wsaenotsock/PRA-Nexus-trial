@@ -15,6 +15,21 @@ export interface BDDNode {
 
 let nodeCounter = 0;
 const nodeCache = new Map<string, BDDNode>();
+const variableOrderMap = new Map<string, number>();
+
+export function setVariableOrderMap(order: string[]) {
+  variableOrderMap.clear();
+  order.forEach((v, index) => {
+    variableOrderMap.set(v, index);
+  });
+}
+
+function compareVariables(v1: string, v2: string): number {
+  const o1 = variableOrderMap.get(v1) ?? 999999;
+  const o2 = variableOrderMap.get(v2) ?? 999999;
+  if (o1 !== o2) return o1 - o2;
+  return v1 < v2 ? -1 : (v1 > v2 ? 1 : 0);
+}
 
 // Terminal nodes
 export const TRUE_NODE: BDDNode = { id: -1, variable: '__TRUE__', high: null, low: null, isTerminal: true, value: true };
@@ -60,13 +75,14 @@ export function bddAnd(a: BDDNode, b: BDDNode): BDDNode {
   if (cached) return cached;
 
   let result: BDDNode;
-  if (a.variable === b.variable) {
+  const comp = compareVariables(a.variable, b.variable);
+  if (comp === 0) {
     result = makeBDDNode(
       a.variable,
       bddAnd(a.high!, b.high!),
       bddAnd(a.low!, b.low!)
     );
-  } else if (a.variable < b.variable) {
+  } else if (comp < 0) {
     result = makeBDDNode(
       a.variable,
       bddAnd(a.high!, b),
@@ -95,13 +111,14 @@ export function bddOr(a: BDDNode, b: BDDNode): BDDNode {
   if (cached) return cached;
 
   let result: BDDNode;
-  if (a.variable === b.variable) {
+  const comp = compareVariables(a.variable, b.variable);
+  if (comp === 0) {
     result = makeBDDNode(
       a.variable,
       bddOr(a.high!, b.high!),
       bddOr(a.low!, b.low!)
     );
-  } else if (a.variable < b.variable) {
+  } else if (comp < 0) {
     result = makeBDDNode(
       a.variable,
       bddOr(a.high!, b),
@@ -386,6 +403,75 @@ export function getVariableOrder(
   return order;
 }
 
+// ===== BDD Sifting Optimization Heuristics =====
+export function siftingOptimize(
+  topGateId: string,
+  gates: Gate[],
+  basicEvents: BasicEvent[],
+  initialOrder: string[],
+  allFaultTrees: FaultTree[] = []
+): { bestOrder: string[]; bestRoot: BDDNode } {
+  let bestOrder = [...initialOrder];
+  
+  // Set initial variable order map and build BDD
+  setVariableOrderMap(bestOrder);
+  resetBDD();
+  let bestRoot = buildBDD(topGateId, gates, basicEvents, bestOrder, allFaultTrees);
+  let minNodeCount = nodeCounter;
+
+  // Skip optimization for very small trees to save computation time
+  if (minNodeCount < 30 || bestOrder.length <= 1) {
+    return { bestOrder, bestRoot };
+  }
+
+  // Optimize up to top 15 variables (highest likelihood of bottleneck)
+  const siftingCandidates = [...bestOrder].slice(0, Math.min(bestOrder.length, 15));
+
+  for (const varToSift of siftingCandidates) {
+    const originalPos = bestOrder.indexOf(varToSift);
+    let bestPos = originalPos;
+
+    // Test distinct representative positions in the ordering
+    const testPositions = Array.from(new Set([
+      0,
+      Math.floor(bestOrder.length * 0.25),
+      Math.floor(bestOrder.length * 0.5),
+      Math.floor(bestOrder.length * 0.75),
+      bestOrder.length - 1,
+      Math.max(0, originalPos - 1),
+      Math.min(bestOrder.length - 1, originalPos + 1)
+    ])).filter(pos => pos >= 0 && pos < bestOrder.length);
+
+    for (const pos of testPositions) {
+      if (pos === originalPos) continue;
+
+      // Create temporary variable order
+      const tempOrder = bestOrder.filter(v => v !== varToSift);
+      tempOrder.splice(pos, 0, varToSift);
+
+      // Rebuild and evaluate node count
+      setVariableOrderMap(tempOrder);
+      resetBDD();
+      const tempRoot = buildBDD(topGateId, gates, basicEvents, tempOrder, allFaultTrees);
+      const tempNodeCount = nodeCounter;
+
+      if (tempNodeCount < minNodeCount && tempNodeCount > 0) {
+        minNodeCount = tempNodeCount;
+        bestOrder = tempOrder;
+        bestRoot = tempRoot;
+        bestPos = pos;
+      }
+    }
+  }
+
+  // Restore the best state
+  setVariableOrderMap(bestOrder);
+  resetBDD();
+  bestRoot = buildBDD(topGateId, gates, basicEvents, bestOrder, allFaultTrees);
+
+  return { bestOrder, bestRoot };
+}
+
 // ===== Main Quantification Function =====
 export function quantifyFaultTree(
   originalFaultTree: FaultTree,
@@ -552,8 +638,14 @@ export function quantifyFaultTree(
   // Get variable ordering
   const variableOrder = getVariableOrder(faultTree.topGateId, faultTree.gates, basicEvents, allFaultTrees);
 
-  // Build BDD
-  const bddRoot = buildBDD(faultTree.topGateId, faultTree.gates, basicEvents, variableOrder, allFaultTrees);
+  // Build optimized BDD using Sifting (incorporating DFS and Sifting)
+  const { bestRoot: bddRoot } = siftingOptimize(
+    faultTree.topGateId,
+    faultTree.gates,
+    basicEvents,
+    variableOrder,
+    allFaultTrees
+  );
 
   // Calculate exact probability
   const topEventProbability = calculateProbability(bddRoot, probabilities);

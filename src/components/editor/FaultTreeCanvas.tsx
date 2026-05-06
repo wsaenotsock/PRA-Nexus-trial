@@ -409,12 +409,20 @@ export default function FaultTreeCanvas({
       if (dragOverNodeId && selectedFaultTreeId) {
         const targetNode = nodes.find((n) => n.id === dragOverNodeId);
         if (targetNode) {
+          // Find old parent gate and remove connection to keep connection line single
+          const currentFt = model.faultTrees?.find((t) => t.id === selectedFaultTreeId);
+          if (currentFt) {
+            const oldParent = currentFt.gates.find((g) => g.children.includes(node.id));
+            if (oldParent && oldParent.id !== dragOverNodeId) {
+              removeChildFromGate(selectedFaultTreeId, oldParent.id, node.id);
+            }
+          }
           addChildToGate(selectedFaultTreeId, dragOverNodeId, node.id);
         }
       }
       setDragOverNodeId(null);
     },
-    [selectedFaultTreeId, model, updateGate, updateBasicEvent, dragOverNodeId, nodes, addChildToGate]
+    [selectedFaultTreeId, model, updateGate, updateBasicEvent, dragOverNodeId, nodes, addChildToGate, removeChildFromGate]
   );
 
   const onInit = useCallback((instance: ReactFlowInstance<Node<FTNodeData>, Edge>) => {
@@ -468,6 +476,76 @@ export default function FaultTreeCanvas({
     }
     setContextMenu(null);
   }, [contextMenu, selectedFaultTreeId, model, locale, addBasicEvent, updateGate]);
+
+  const handleInsertGateAbove = useCallback(() => {
+    if (!contextMenu || !selectedFaultTreeId) return;
+    const nodeId = contextMenu.nodeId;
+    
+    const faultTree = model.faultTrees.find((ft) => ft.id === selectedFaultTreeId);
+    if (!faultTree) return;
+    
+    // 1. Find the target node position and check existence
+    let currentPosition = { x: 0, y: 0 };
+    let isBasicEvent = false;
+    
+    const be = model.basicEvents.find((e) => e.id === nodeId);
+    if (be) {
+      currentPosition = be.position;
+      isBasicEvent = true;
+    } else {
+      const gate = faultTree.gates.find((g) => g.id === nodeId);
+      if (gate) {
+        currentPosition = gate.position;
+      } else {
+        return; // Node not found
+      }
+    }
+    
+    // 2. Find parent gate of the target node in the active FT
+    const parentGate = faultTree.gates.find((g) => g.children.includes(nodeId));
+    if (!parentGate) {
+      alert(locale === 'ja' ? '挿入先となる親ゲートが見つかりませんでした。' : 'Parent gate not found.');
+      setContextMenu(null);
+      return;
+    }
+
+    const newGateId = uuidv4();
+    const newGate = {
+      id: newGateId,
+      name: locale === 'ja' ? '新規ORゲート' : 'New OR Gate',
+      type: 'OR' as any,
+      children: [nodeId],
+      position: { x: currentPosition.x, y: Math.max(currentPosition.y - 100, parentGate.position.y + 30) },
+    };
+
+    // 1. Add new gate
+    addGate(selectedFaultTreeId, newGate);
+
+    // 2. Replace target node ID with the new gate ID in the parent's children
+    const updatedParentGate = {
+      ...parentGate,
+      children: parentGate.children.map((cid) => (cid === nodeId ? newGateId : cid)),
+    };
+    updateGate(selectedFaultTreeId, updatedParentGate);
+
+    // 3. Move the target node slightly down relative to the new gate
+    if (isBasicEvent && be) {
+      updateBasicEvent({
+        ...be,
+        position: { x: be.position.x, y: be.position.y + 100 },
+      });
+    } else {
+      const targetGate = faultTree.gates.find((g) => g.id === nodeId);
+      if (targetGate) {
+        updateGate(selectedFaultTreeId, {
+          ...targetGate,
+          position: { x: targetGate.position.x, y: targetGate.position.y + 100 },
+        });
+      }
+    }
+
+    setContextMenu(null);
+  }, [contextMenu, selectedFaultTreeId, model, locale, addGate, updateGate, updateBasicEvent]);
 
   const handleDeleteNode = useCallback((nodeId: string, nodeType: string) => {
     if (onNodeDeleteRequest) {
@@ -740,6 +818,26 @@ export default function FaultTreeCanvas({
           >
             {locale === 'ja' ? 'コピー' : 'Copy'}
           </button>
+          {['andGate', 'orGate', 'atleastGate', 'basicEvent'].includes(contextMenu.nodeType) && (
+            <button
+              className="context-menu-item"
+              style={{
+                width: '100%',
+                padding: '8px 16px',
+                textAlign: 'left',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+              onClick={handleInsertGateAbove}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
+              {locale === 'ja' ? '上にゲートを挿入する' : 'Insert Gate Above'}
+            </button>
+          )}
           <button
             className="context-menu-item"
             style={{
@@ -904,7 +1002,7 @@ export default function FaultTreeCanvas({
           <button 
             className="btn btn--secondary btn--sm" 
             onClick={handleExportImage}
-            title={locale === 'ja' ? 'SVGとして保存' : 'Save as SVG'}
+            title={locale === 'ja' ? 'SVGエクスポート' : 'Save as SVG'}
             style={{ 
               boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
               background: 'var(--bg-elevated)',
@@ -915,7 +1013,7 @@ export default function FaultTreeCanvas({
               gap: '6px'
             }}
           >
-            📸 {locale === 'ja' ? 'SVGとして保存' : 'Save as SVG'}
+            📸 {locale === 'ja' ? 'SVGエクスポート' : 'Save as SVG'}
           </button>
         </Panel>
       </ReactFlow>

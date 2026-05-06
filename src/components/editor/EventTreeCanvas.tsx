@@ -529,7 +529,7 @@ export default function EventTreeCanvas({
         <button 
           className="btn btn--secondary btn--sm" 
           onClick={handleExportImage}
-          title={locale === 'ja' ? 'SVGとして保存' : 'Save as SVG'}
+          title={locale === 'ja' ? 'SVGエクスポート' : 'Save as SVG'}
           style={{ 
             boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
             padding: '6px 12px',
@@ -538,7 +538,7 @@ export default function EventTreeCanvas({
             gap: '6px'
           }}
         >
-          📸 {locale === 'ja' ? 'SVGとして保存' : 'Save as SVG'}
+          📸 {locale === 'ja' ? 'SVGエクスポート' : 'Save as SVG'}
         </button>
       </div>
 

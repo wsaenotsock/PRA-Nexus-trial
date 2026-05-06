@@ -56,6 +56,55 @@ export default function AnalysisReport({
 
   const uncertainty = (result as any).uncertainty;
 
+  const getEventFormattedName = (id: string) => {
+    const be = model.basicEvents.find(b => b.id === id);
+    if (be) {
+      return be.eventId ? `${be.name} [${be.eventId}]` : be.name;
+    }
+    const ie = model.initiatingEvents.find(i => i.id === id);
+    if (ie) {
+      return ie.code ? `${ie.name} [${ie.code}]` : ie.name;
+    }
+    return id;
+  };
+
+  const getEventDisplayName = (eid: string) => {
+    const be = model.basicEvents.find(b => b.id === eid);
+    const ie = model.initiatingEvents.find(i => i.id === eid);
+    if (be || ie) return getEventFormattedName(eid);
+    
+    // CCF 独立イベントのデコード: CCF_GroupID_IND_MemberID
+    if (eid.startsWith('CCF_') && eid.includes('_IND_')) {
+      const memberId = eid.split('_IND_')[1];
+      const memberFormatted = getEventFormattedName(memberId);
+      return locale === 'ja' ? `${memberFormatted} (CCF個別独立)` : `${memberFormatted} (CCF Ind)`;
+    }
+    
+    // CCF 多重故障イベントのデコード: CCF_GroupID_Member1_Member2...
+    if (eid.startsWith('CCF_')) {
+      const parts = eid.split('_');
+      const memberIds = parts.slice(2);
+      if (memberIds.length > 0) {
+        const memberNames = memberIds.map(id => getEventFormattedName(id)).join(' - ');
+        return `CCF (${memberNames})`;
+      }
+    }
+    
+    return eid;
+  };
+
+  const getEventProb = (eid: string) => {
+    const be = model.basicEvents.find(b => b.id === eid);
+    if (be && be.probability !== undefined) return be.probability;
+    const ie = model.initiatingEvents.find(i => i.id === eid);
+    if (ie) return ie.frequency;
+    
+    if (result && result.baseProbabilities && result.baseProbabilities[eid] !== undefined) {
+      return result.baseProbabilities[eid];
+    }
+    return 0;
+  };
+
   return (
     <div className="analysis-report print-content" style={{ padding: '40px 60px', background: 'white', color: 'black', minHeight: '100%', fontFamily: '"Inter", "Segoe UI", sans-serif' }}>
       <header style={{ borderBottom: '3px solid #333', marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '20px' }}>
@@ -205,12 +254,11 @@ export default function AnalysisReport({
                   <td style={{ padding: '10px 8px' }}>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                       {cs.events.map((eid, j) => {
-                        const be = model.basicEvents.find(b => b.id === eid);
                         return (
                           <span key={j} style={{ padding: '2px 6px', background: '#f1f5f9', borderRadius: '3px', fontSize: '10px', border: '1px solid #e2e8f0' }}>
-                            {be?.name || eid}
+                            {getEventDisplayName(eid)}
                             <span style={{ marginLeft: '4px', opacity: 0.6, fontWeight: 400 }}>
-                              ({be?.probability?.toExponential(1) || '?'})
+                              ({getEventProb(eid).toExponential(1)})
                             </span>
                           </span>
                         );

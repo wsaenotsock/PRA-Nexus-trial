@@ -124,15 +124,59 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
 
   // Find event names for cutsets
   const eventNameMap = new Map<string, string>();
+  const eventIdMap = new Map<string, string>();
   const eventProbMap = new Map<string, number>();
   for (const be of model.basicEvents) {
     eventNameMap.set(be.id, be.name);
+    if (be.eventId) {
+      eventIdMap.set(be.id, be.eventId);
+    }
     eventProbMap.set(be.id, be.probability || 0);
   }
   for (const ie of model.initiatingEvents) {
     eventNameMap.set(ie.id, ie.name);
+    if (ie.code) {
+      eventIdMap.set(ie.id, ie.code);
+    }
     eventProbMap.set(ie.id, ie.frequency);
   }
+
+  const getEventFormattedName = (id: string) => {
+    const name = eventNameMap.get(id) || id;
+    const code = eventIdMap.get(id);
+    return code ? `${name} [${code}]` : name;
+  };
+
+  const getEventDisplayName = (eid: string) => {
+    if (eventNameMap.has(eid)) return getEventFormattedName(eid);
+    
+    // CCF 独立イベントのデコード: CCF_GroupID_IND_MemberID
+    if (eid.startsWith('CCF_') && eid.includes('_IND_')) {
+      const memberId = eid.split('_IND_')[1];
+      const memberFormatted = getEventFormattedName(memberId);
+      return locale === 'ja' ? `${memberFormatted} (CCF個別独立)` : `${memberFormatted} (CCF Ind)`;
+    }
+    
+    // CCF 多重故障イベントのデコード: CCF_GroupID_Member1_Member2...
+    if (eid.startsWith('CCF_')) {
+      const parts = eid.split('_');
+      const memberIds = parts.slice(2);
+      if (memberIds.length > 0) {
+        const memberNames = memberIds.map(id => getEventFormattedName(id)).join(' - ');
+        return `CCF (${memberNames})`;
+      }
+    }
+    
+    return eid;
+  };
+
+  const getEventProb = (eid: string) => {
+    if (eventProbMap.has(eid)) return eventProbMap.get(eid)!;
+    if (result && result.baseProbabilities && result.baseProbabilities[eid] !== undefined) {
+      return result.baseProbabilities[eid];
+    }
+    return 0;
+  };
 
   return (
     <div className="animate-fadeIn" style={{
@@ -292,9 +336,9 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                         {cs.events.map((eid, j) => (
                           <span key={j} className="badge badge--neutral" style={{ fontSize: '10px' }}>
-                            {eventNameMap.get(eid) || eid}
+                            {getEventDisplayName(eid)}
                             <span style={{ marginLeft: '4px', opacity: 0.6 }}>
-                              ({eventProbMap.get(eid)?.toExponential(1) || '?'})
+                              ({getEventProb(eid).toExponential(1)})
                             </span>
                           </span>
                         ))}
@@ -361,7 +405,7 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
                   const barWidth = Math.max((val / maxImportanceValue) * 100, 1);
                   return (
                     <tr key={m.eventId}>
-                      <td style={{ fontWeight: 500 }}>{eventNameMap.get(m.eventId) || m.eventId}</td>
+                      <td style={{ fontWeight: 500 }}>{getEventDisplayName(m.eventId)}</td>
                       <td>
                         <div style={{ width: '100%', height: '12px', background: 'var(--bg-secondary)', borderRadius: '6px', overflow: 'hidden' }}>
                           <div style={{

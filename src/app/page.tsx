@@ -720,7 +720,7 @@ export default function Home() {
         {/* Quantification Settings */}
         {viewMode === 'quantification' && (
           <div style={{ flex: 1, background: 'var(--bg-primary)', overflow: 'auto' }}>
-            <QuantificationPanel locale={locale} />
+            <QuantificationPanel locale={locale} onNavigateToResults={() => setViewMode('results')} />
           </div>
         )}
 

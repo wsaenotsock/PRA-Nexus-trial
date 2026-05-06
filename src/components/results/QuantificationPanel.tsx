@@ -7,9 +7,10 @@ import type { GlobalQuantificationSettings } from '@/lib/types';
 
 interface QuantificationPanelProps {
   locale: 'ja' | 'en';
+  onNavigateToResults?: () => void;
 }
 
-export default function QuantificationPanel({ locale }: QuantificationPanelProps) {
+export default function QuantificationPanel({ locale, onNavigateToResults }: QuantificationPanelProps) {
   const model = useModelStore(s => s.model);
   const settings = model.quantificationSettings || {
     cutOff: 1e-9,
@@ -129,7 +130,10 @@ export default function QuantificationPanel({ locale }: QuantificationPanelProps
           {hasResult && (
             <button 
               className={`btn btn--sm ${isActive ? 'btn--primary' : 'btn--secondary'}`}
-              onClick={() => setActiveResult(target.id)}
+              onClick={() => {
+                setActiveResult(target.id);
+                onNavigateToResults?.();
+              }}
             >
               {locale === 'ja' ? '結果を表示' : 'View'}
             </button>

@@ -11,8 +11,14 @@ interface BasicEventIDInputProps {
   locale: 'ja' | 'en';
 }
 
+interface PendingSync {
+  trimmedId: string;
+  sameIdEvent: BasicEvent;
+}
+
 function BasicEventIDInput({ basicEvent, basicEvents, updateBasicEvent, locale }: BasicEventIDInputProps) {
   const [localEventId, setLocalEventId] = React.useState(basicEvent.eventId || '');
+  const [pendingSync, setPendingSync] = React.useState<PendingSync | null>(null);
 
   React.useEffect(() => {
     setLocalEventId(basicEvent.eventId || '');
@@ -26,46 +32,23 @@ function BasicEventIDInput({ basicEvent, basicEvents, updateBasicEvent, locale }
     
     if (trimmedId === currentId) return;
 
-    // 空文字フォールバックバグを完璧に解消した重複チェック！
+    // ストアから最新データを取得して重複チェック
+    const storeBasicEvents = useModelStore.getState().model.basicEvents;
+
     const sameIdEvent = trimmedId 
-      ? basicEvents.find(e => {
+      ? storeBasicEvents.find(e => {
           if (e.id === basicEvent.id) return false;
-          const targetId = (e.eventId && e.eventId.trim() !== '') ? e.eventId : e.id;
-          return targetId.toLowerCase() === trimmedId.toLowerCase();
+          const eEventId = e.eventId;
+          if (eEventId && eEventId.trim() !== '' && eEventId.trim().toLowerCase() === trimmedId.toLowerCase()) {
+            return true;
+          }
+          return false;
         })
       : null;
 
     if (sameIdEvent) {
-      const confirmSync = window.confirm(
-        `基事象ID "${trimmedId}" は既に存在します。\n既存の基事象「${sameIdEvent.name}」のデータ（故障率、ミッション時間、分布など）をこの基本事象に反映しますか？`
-      );
-
-      if (confirmSync) {
-        updateBasicEvent({
-          ...basicEvent,
-          eventId: trimmedId,
-          name: sameIdEvent.name,
-          tags: sameIdEvent.tags || [],
-          failureType: sameIdEvent.failureType,
-          failureRate: sameIdEvent.failureRate,
-          repairTime: sameIdEvent.repairTime,
-          probability: sameIdEvent.probability,
-          missionTime: sameIdEvent.missionTime,
-          demands: sameIdEvent.demands,
-          distribution: JSON.parse(JSON.stringify(sameIdEvent.distribution)),
-          parameterId: sameIdEvent.parameterId,
-          source: sameIdEvent.source || '',
-          memo: sameIdEvent.memo || '',
-          seismicFragilityId: sameIdEvent.seismicFragilityId,
-          __force_sync_others__: true
-        } as any);
-      } else {
-        updateBasicEvent({
-          ...basicEvent,
-          eventId: trimmedId,
-          __force_sync_others__: false
-        } as any);
-      }
+      // カスタムモーダルで確認を表示
+      setPendingSync({ trimmedId, sameIdEvent });
     } else {
       updateBasicEvent({
         ...basicEvent,
@@ -75,38 +58,173 @@ function BasicEventIDInput({ basicEvent, basicEvents, updateBasicEvent, locale }
     }
   };
 
+  const handleConfirmSync = () => {
+    if (!pendingSync) return;
+    const { trimmedId, sameIdEvent } = pendingSync;
+    updateBasicEvent({
+      ...basicEvent,
+      eventId: trimmedId,
+      name: sameIdEvent.name,
+      tags: sameIdEvent.tags || [],
+      failureType: sameIdEvent.failureType,
+      failureRate: sameIdEvent.failureRate,
+      repairTime: sameIdEvent.repairTime,
+      probability: sameIdEvent.probability,
+      missionTime: sameIdEvent.missionTime,
+      demands: sameIdEvent.demands,
+      distribution: JSON.parse(JSON.stringify(sameIdEvent.distribution)),
+      parameterId: sameIdEvent.parameterId,
+      source: sameIdEvent.source || '',
+      memo: sameIdEvent.memo || '',
+      seismicFragilityId: sameIdEvent.seismicFragilityId,
+      __force_sync_others__: true
+    } as any);
+    setPendingSync(null);
+  };
+
+  const handleCancelSync = () => {
+    if (!pendingSync) return;
+    const { trimmedId } = pendingSync;
+    updateBasicEvent({
+      ...basicEvent,
+      eventId: trimmedId,
+      __force_sync_others__: false
+    } as any);
+    setPendingSync(null);
+  };
+
   return (
-    <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
-      <input
-        className="form-input form-input--mono"
-        style={{ flex: 1, margin: 0 }}
-        placeholder={locale === 'ja' ? '例: BE-01' : 'e.g. BE-01'}
-        value={localEventId}
-        onChange={(e) => setLocalEventId(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            commitEventId();
-          }
-        }}
-      />
-      {hasChanged && (
-        <button 
-          className="btn btn--primary btn--sm animate-pulse"
-          onClick={commitEventId}
-          style={{ 
-            padding: '6px 12px', 
-            whiteSpace: 'nowrap',
-            fontSize: '12px',
-            height: '34px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
+    <>
+      <div style={{ display: 'flex', gap: '8px', width: '100%', alignItems: 'center' }}>
+        <input
+          className="form-input form-input--mono"
+          style={{ flex: 1, margin: 0 }}
+          placeholder={locale === 'ja' ? '例: BE-01' : 'e.g. BE-01'}
+          value={localEventId}
+          onChange={(e) => setLocalEventId(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              commitEventId();
+            }
           }}
-        >
-          {locale === 'ja' ? '適用' : 'Apply'}
-        </button>
+        />
+        {hasChanged && (
+          <button 
+            className="btn btn--primary btn--sm"
+            onClick={commitEventId}
+            style={{ 
+              padding: '6px 12px', 
+              whiteSpace: 'nowrap',
+              fontSize: '12px',
+              height: '34px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {locale === 'ja' ? '適用' : 'Apply'}
+          </button>
+        )}
+      </div>
+
+      {/* 同一ID確認モーダル */}
+      {pendingSync && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 99999,
+          backdropFilter: 'blur(4px)',
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(30, 35, 55, 0.98), rgba(20, 24, 40, 0.98))',
+            border: '1px solid rgba(99, 102, 241, 0.3)',
+            borderRadius: '16px',
+            padding: '28px 32px',
+            maxWidth: '480px',
+            width: '90%',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(99, 102, 241, 0.1)',
+            color: '#e2e8f0',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <span style={{ fontSize: '24px' }}>⚠️</span>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#f8fafc' }}>
+                {locale === 'ja' ? '既存データの反映確認' : 'Confirm Data Sync'}
+              </h3>
+            </div>
+            <p style={{ margin: '0 0 8px', fontSize: '14px', lineHeight: '1.6', color: '#cbd5e1' }}>
+              {locale === 'ja' 
+                ? `基事象ID "${pendingSync.trimmedId}" は既に存在します。`
+                : `Basic Event ID "${pendingSync.trimmedId}" already exists.`}
+            </p>
+            <p style={{ margin: '0 0 20px', fontSize: '14px', lineHeight: '1.6', color: '#cbd5e1' }}>
+              {locale === 'ja'
+                ? `既存の基事象「${pendingSync.sameIdEvent.name}」のデータ（故障率、ミッション時間、分布など）をこの基本事象に反映しますか？`
+                : `Apply data from existing event "${pendingSync.sameIdEvent.name}" (failure rate, mission time, distribution, etc.) to this event?`}
+            </p>
+            <div style={{
+              background: 'rgba(99, 102, 241, 0.08)',
+              border: '1px solid rgba(99, 102, 241, 0.2)',
+              borderRadius: '8px',
+              padding: '10px 14px',
+              marginBottom: '20px',
+              fontSize: '12px',
+              color: '#a5b4fc',
+            }}>
+              {locale === 'ja' ? '📋 コピー元: ' : '📋 Source: '}
+              <strong>{pendingSync.sameIdEvent.name}</strong>
+              {pendingSync.sameIdEvent.failureRate !== undefined && (
+                <span> | {locale === 'ja' ? '故障率' : 'λ'}: {pendingSync.sameIdEvent.failureRate}</span>
+              )}
+              {pendingSync.sameIdEvent.probability !== undefined && (
+                <span> | {locale === 'ja' ? '確率' : 'P'}: {pendingSync.sameIdEvent.probability}</span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={handleCancelSync}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(148, 163, 184, 0.3)',
+                  background: 'rgba(51, 65, 85, 0.5)',
+                  color: '#94a3b8',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {locale === 'ja' ? 'キャンセル' : 'Cancel'}
+              </button>
+              <button
+                onClick={handleConfirmSync}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                  color: '#fff',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)',
+                  transition: 'all 0.2s',
+                }}
+              >
+                {locale === 'ja' ? 'データを反映' : 'Apply Data'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-    </div>
+    </>
   );
 }
 
