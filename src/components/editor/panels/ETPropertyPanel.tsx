@@ -138,15 +138,45 @@ export default function ETPropertyPanel({ selectedNodeId, selectedNodeType, loca
     }
   };
 
-  const handleUpdateIE = () => {
-    if (selectedNodeType === 'initiatingEvent') {
-      updateInitiatingEvent(selectedNodeId, {
-        name: localIELabel,
-        code: localCode,
-        frequency: parseFloat(localIEFreq) || 0,
-        linkedFaultTreeId: localLinkedFaultTreeId
-      });
+  const saveIEChanges = (updates: Partial<InitiatingEvent>) => {
+    if (selectedNodeType !== 'initiatingEvent' || !selectedEventTreeId || !selectedNodeId) return;
+
+    const usingETs = (model.eventTrees || []).filter(et => et.initiatingEventId === selectedNodeId);
+    
+    if (usingETs.length > 1) {
+      // 共有されているため新しく複製してこのETの参照だけを切り替える
+      const newId = `IE_${Date.now()}`;
+      const currentIE = model.initiatingEvents?.find(i => i.id === selectedNodeId);
+      
+      const newIE: InitiatingEvent = {
+        id: newId,
+        name: currentIE?.name || '',
+        code: currentIE?.code || '',
+        frequency: currentIE?.frequency || 0,
+        linkedFaultTreeId: currentIE?.linkedFaultTreeId || '',
+        distribution: currentIE?.distribution || { type: 'point' },
+        description: currentIE?.description || '',
+        ...updates
+      };
+      
+      addInitiatingEvent(newIE);
+      updateEventTree(selectedEventTreeId, { initiatingEventId: newId });
+      
+      if (onNodeSelect) {
+        onNodeSelect(newId, 'initiatingEvent');
+      }
+    } else {
+      // 共有されていない場合は直接更新
+      updateInitiatingEvent(selectedNodeId, updates);
     }
+  };
+
+  const handleUpdateIE = () => {
+    saveIEChanges({
+      name: localIELabel,
+      code: localCode,
+      frequency: parseFloat(localIEFreq) || 0,
+    });
   };
 
   return (
@@ -443,10 +473,9 @@ export default function ETPropertyPanel({ selectedNodeId, selectedNodeType, loca
                     className="form-select"
                     value={localLinkedFaultTreeId}
                     onChange={(e) => {
-                      setLocalLinkedFaultTreeId(e.target.value);
-                      if (selectedNodeId) {
-                        updateInitiatingEvent(selectedNodeId, { linkedFaultTreeId: e.target.value });
-                      }
+                      const val = e.target.value;
+                      setLocalLinkedFaultTreeId(val);
+                      saveIEChanges({ linkedFaultTreeId: val });
                     }}
                   >
                     <option value="">{locale === 'ja' ? '未選択 (手入力頻度を使用)' : 'None (Use manual frequency)'}</option>
