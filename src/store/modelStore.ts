@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
+import { setItem as setIDBItem, getItem as getIDBItem } from '@/lib/db';
 import * as d3 from 'd3';
 import type { PRAModel, BasicEvent, HouseEvent, Gate, FaultTree, EndState, Parameter, CCFGroup, InitiatingEvent, EventTree, Sequence, FunctionalEvent, Branch, GateType, GlobalQuantificationSettings, SeismicSettings, SeismicHazardCurve, SeismicFragility } from '@/lib/types';
 
@@ -1059,7 +1060,9 @@ interface ModelState {
   branchSequence: (eventTreeId: string, sequenceId: string, functionalEventId: string) => void;
   unbranchSequence: (eventTreeId: string, sequenceId: string, functionalEventId: string) => void;
   updateSequence: (eventTreeId: string, sequenceId: string, updates: Partial<Sequence>) => void;
+  addInitiatingEvent: (ie: InitiatingEvent) => void;
   updateInitiatingEvent: (id: string, updates: Partial<InitiatingEvent>) => void;
+  removeInitiatingEvent: (id: string) => void;
   addChildToGate: (faultTreeId: string, gateId: string, childId: string) => void;
   removeChildFromGate: (faultTreeId: string, gateId: string, childId: string) => void;
   addSeismicHazard: (hazard: SeismicHazardCurve) => void;
@@ -1072,8 +1075,8 @@ interface ModelState {
   updateQuantificationSettings: (settings: Partial<GlobalQuantificationSettings>) => void;
   moveGateChild: (faultTreeId: string, gateId: string, childId: string, direction: 'left' | 'right') => void;
   pushHistory: () => void;
-  saveToLocalStorage: () => void;
-  loadFromLocalStorage: () => boolean;
+  saveToLocalStorage: () => Promise<void>;
+  loadFromLocalStorage: () => Promise<boolean>;
   convertToSubtree: (faultTreeId: string, gateId: string) => void;
 }
 
@@ -1956,6 +1959,30 @@ export const useModelStore = create<ModelState>((set, get) => ({
     });
   },
 
+  addInitiatingEvent: (ie) => {
+    get().pushHistory();
+    set((state) => ({
+      model: {
+        ...state.model,
+        initiatingEvents: [...(state.model.initiatingEvents || []), ie],
+        updatedAt: new Date().toISOString()
+      },
+      isDirty: true
+    }));
+  },
+
+  removeInitiatingEvent: (id) => {
+    get().pushHistory();
+    set((state) => ({
+      model: {
+        ...state.model,
+        initiatingEvents: (state.model.initiatingEvents || []).filter(ie => ie.id !== id),
+        updatedAt: new Date().toISOString()
+      },
+      isDirty: true
+    }));
+  },
+
   addSeismicHazard: (hazard) => {
     get().pushHistory();
     set((state) => ({
@@ -2082,21 +2109,39 @@ export const useModelStore = create<ModelState>((set, get) => ({
     }));
   },
 
-  saveToLocalStorage: () => {
+  saveToLocalStorage: async () => {
     const { model } = get();
     try {
-      localStorage.setItem('pra-nexus-model', JSON.stringify(model));
+      // 1. まず大容量データを安全に保持できる IndexedDB への保存を実行（容量上限なし）
+      await setIDBItem('pra-nexus-model', model);
+
+      // 2. 互換性のために、サイズが許せば localStorage にも保存を試みる（容量超過例外をキャッチして無視）
+      try {
+        localStorage.setItem('pra-nexus-model', JSON.stringify(model));
+      } catch (quotaError) {
+        console.warn('localStorage storage limit exceeded, but successfully saved to IndexedDB (No Quota Limit)!', quotaError);
+      }
+
       set({ isDirty: false });
     } catch (e) {
-      console.error('Failed to save model:', e);
+      console.error('Failed to save model to IndexedDB:', e);
     }
   },
 
-  loadFromLocalStorage: () => {
+  loadFromLocalStorage: async () => {
     try {
-      const data = localStorage.getItem('pra-nexus-model');
-      if (data) {
-        const parsed = JSON.parse(data) as any;
+      // 1. まず IndexedDB からの読み込みを実行
+      let parsed = await getIDBItem('pra-nexus-model');
+
+      // 2. 無ければ従来の localStorage からフォールバック読み込み
+      if (!parsed) {
+        const data = localStorage.getItem('pra-nexus-model');
+        if (data) {
+          parsed = JSON.parse(data) as any;
+        }
+      }
+
+      if (parsed) {
         
         if (!parsed.seismicHazards) {
           parsed.seismicHazards = [];

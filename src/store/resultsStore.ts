@@ -59,6 +59,39 @@ function getWorker(): Worker {
 }
 
 export async function runWorkerCommand<T>(type: string, payload: any): Promise<T> {
+  const engineMode = process.env.NEXT_PUBLIC_ENGINE_MODE || 'client';
+
+  if (engineMode === 'server') {
+    try {
+      const fullPayload = { ...payload };
+
+      // Dynamically import useModelStore to prevent circular dependency at bootstrap
+      const { useModelStore } = await import('./modelStore');
+      fullPayload.model = useModelStore.getState().model;
+
+      const activeResultId = useResultsStore.getState().activeResultId;
+      if (activeResultId) {
+        fullPayload.currentResult = useResultsStore.getState().results[activeResultId];
+      }
+
+      const response = await fetch('/api/quantify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, payload: fullPayload }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || `Server calculation error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.result as T;
+    } catch (err: any) {
+      throw new Error(`Server quantification failed: ${err.message}`);
+    }
+  }
+
   return new Promise((resolve, reject) => {
     try {
       const worker = getWorker();

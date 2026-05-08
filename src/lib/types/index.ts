@@ -292,7 +292,7 @@ export interface QuantificationResult {
   sequenceResults?: SequenceResult[];
   seismicResult?: SeismicResult;
   computeTimeMs: number;
-  method: 'bdd_exact' | 'rare_event' | 'seismic_integration';
+  method: 'bdd_exact' | 'rare_event' | 'seismic_integration' | 'analytical_approx';
   baseProbabilities?: Record<string, number>; // Added for sensitivity analysis
   uncertainty?: any; // Monte Carlo result
   cutoff?: number;

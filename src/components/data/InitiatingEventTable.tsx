@@ -11,16 +11,19 @@ interface InitiatingEventTableProps {
 export default function InitiatingEventTable({ locale = 'ja' }: InitiatingEventTableProps) {
   const model = useModelStore((s) => s.model);
   const updateInitiatingEvent = useModelStore((s) => s.updateInitiatingEvent);
+  const addInitiatingEvent = useModelStore((s) => s.addInitiatingEvent);
+  const removeInitiatingEvent = useModelStore((s) => s.removeInitiatingEvent);
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredIEs = (model.initiatingEvents || []).filter(ie => 
     ie.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ie.id.toLowerCase().includes(searchTerm.toLowerCase())
+    ie.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (ie.code || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ padding: '16px', borderBottom: '1px solid var(--border-default)', display: 'flex', gap: '16px' }}>
+      <div style={{ padding: '16px', borderBottom: '1px solid var(--border-default)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
         <input 
           className="form-input" 
           placeholder={locale === 'ja' ? '起因事象を検索...' : 'Search initiating events...'}
@@ -28,25 +31,55 @@ export default function InitiatingEventTable({ locale = 'ja' }: InitiatingEventT
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{ maxWidth: '300px' }}
         />
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            const newId = `IE-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+            addInitiatingEvent({
+              id: newId,
+              code: 'NEW-IE',
+              name: locale === 'ja' ? '新規起因事象' : 'New Initiating Event',
+              frequency: 1.0,
+              description: '',
+              distribution: { type: 'point' }
+            });
+          }}
+          style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+        >
+          <svg style={{ width: '16px', height: '16px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          {locale === 'ja' ? '起因事象を追加' : 'Add Initiating Event'}
+        </button>
       </div>
 
       <div style={{ flex: 1, overflow: 'auto' }}>
         <table className="results-table">
           <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
             <tr>
-               <th>{locale === 'ja' ? 'ID' : 'ID'}</th>
+              <th>{locale === 'ja' ? 'ID' : 'ID'}</th>
+              <th>{locale === 'ja' ? 'コード' : 'Code'}</th>
               <th>{locale === 'ja' ? '名称' : 'Name'}</th>
               <th>{locale === 'ja' ? '頻度 [/yr]' : 'Frequency [/yr]'}</th>
               <th>{locale === 'ja' ? '分布' : 'Dist.'}</th>
               <th>{locale === 'ja' ? '不確かさ' : 'Uncertainty'}</th>
               <th>{locale === 'ja' ? 'リンク済みFT' : 'Linked FT'}</th>
               <th>{locale === 'ja' ? '説明' : 'Description'}</th>
+              <th style={{ width: '60px', textAlign: 'center' }}>{locale === 'ja' ? '操作' : 'Action'}</th>
             </tr>
           </thead>
           <tbody>
             {filteredIEs.map((ie) => (
               <tr key={ie.id}>
                 <td className="td-mono" style={{ fontSize: '11px' }}>{ie.id}</td>
+                <td>
+                  <input 
+                    className="form-input td-mono" 
+                    value={ie.code || ''} 
+                    onChange={(e) => updateInitiatingEvent(ie.id, { code: e.target.value })}
+                    style={{ background: 'transparent', border: 'none', padding: '2px 4px' }}
+                  />
+                </td>
                 <td>
                   <input 
                     className="form-input" 
@@ -134,6 +167,30 @@ export default function InitiatingEventTable({ locale = 'ja' }: InitiatingEventT
                     onChange={(e) => updateInitiatingEvent(ie.id, { description: e.target.value })}
                     style={{ background: 'transparent', border: 'none', padding: '2px 4px' }}
                   />
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  <button
+                    onClick={() => {
+                      if (confirm(locale === 'ja' ? `起因事象 "${ie.name}" を削除しますか？` : `Are you sure you want to delete initiating event "${ie.name}"?`)) {
+                        removeInitiatingEvent(ie.id);
+                      }
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-danger, #FF4757)',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title={locale === 'ja' ? '削除' : 'Delete'}
+                  >
+                    <svg style={{ width: '16px', height: '16px' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </td>
               </tr>
             ))}

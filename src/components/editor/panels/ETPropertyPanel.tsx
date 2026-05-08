@@ -13,6 +13,8 @@ export default function ETPropertyPanel({ selectedNodeId, selectedNodeType, loca
   const updateFunctionalEvent = useModelStore((s) => s.updateFunctionalEvent);
   const updateSequence = useModelStore((s) => s.updateSequence);
   const updateInitiatingEvent = useModelStore((s) => s.updateInitiatingEvent);
+  const updateEventTree = useModelStore((s) => s.updateEventTree);
+  const addInitiatingEvent = useModelStore((s) => s.addInitiatingEvent);
   
   const [localName, setLocalName] = useState('');
   const [localCode, setLocalCode] = useState('');
@@ -22,6 +24,11 @@ export default function ETPropertyPanel({ selectedNodeId, selectedNodeType, loca
   const [localTransferETId, setLocalTransferETId] = useState('');
   const [localIELabel, setLocalIELabel] = useState('');
   const [localIEFreq, setLocalIEFreq] = useState('');
+
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [newIECode, setNewIECode] = useState('');
+  const [newIEName, setNewIEName] = useState('');
+  const [newIEFreq, setNewIEFreq] = useState('1.0e-3');
 
   const currentET = model.eventTrees?.find(et => et.id === selectedEventTreeId);
 
@@ -304,61 +311,160 @@ export default function ETPropertyPanel({ selectedNodeId, selectedNodeType, loca
 
         {selectedNodeType === 'initiatingEvent' && (
           <>
-            <div className="form-group">
-              <label className="form-label">{locale === 'ja' ? 'ID (英字等)' : 'ID (Code)'}</label>
-              <input
-                className="form-input td-mono"
-                value={localCode}
-                onChange={(e) => setLocalCode(e.target.value)}
-                onBlur={handleUpdateIE}
-                onKeyDown={(e) => e.key === 'Enter' && handleUpdateIE()}
-                placeholder="e.g. LOCA"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">{locale === 'ja' ? '起因事象名' : 'IE Name'}</label>
-              <input
-                className="form-input"
-                value={localIELabel}
-                onChange={(e) => setLocalIELabel(e.target.value)}
-                onBlur={handleUpdateIE}
-                onKeyDown={(e) => e.key === 'Enter' && handleUpdateIE()}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label">{locale === 'ja' ? '関連付けられたFault Tree' : 'Linked Fault Tree'}</label>
+            <div className="form-group" style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
+              <label className="form-label">{locale === 'ja' ? '起因事象の選択・割当' : 'Select & Assign Initiating Event'}</label>
               <select
-                className="form-select"
-                value={localLinkedFaultTreeId}
+                className="form-select td-mono"
+                value={selectedNodeId || ''}
                 onChange={(e) => {
-                  setLocalLinkedFaultTreeId(e.target.value);
-                  if (selectedNodeId) {
-                    updateInitiatingEvent(selectedNodeId, { linkedFaultTreeId: e.target.value });
+                  const val = e.target.value;
+                  if (val === '__CREATE_NEW__') {
+                    setIsCreatingNew(true);
+                  } else if (val) {
+                    setIsCreatingNew(false);
+                    if (selectedEventTreeId) {
+                      updateEventTree(selectedEventTreeId, { initiatingEventId: val });
+                    }
                   }
                 }}
               >
-                <option value="">{locale === 'ja' ? '未選択 (手入力頻度を使用)' : 'None (Use manual frequency)'}</option>
-                {model.faultTrees?.map(ft => (
-                  <option key={ft.id} value={ft.id}>{ft.name}</option>
+                {model.initiatingEvents?.map(ie => (
+                  <option key={ie.id} value={ie.id}>{ie.name} ({ie.code || ie.id})</option>
                 ))}
+                <option value="__CREATE_NEW__">✨ {locale === 'ja' ? '+ 新しい起因事象を作成...' : '+ Create New Initiating Event...'}</option>
               </select>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">{locale === 'ja' ? '発生頻度 [/yr]' : 'Frequency [/yr]'}</label>
-              <input
-                className="form-input"
-                type="number"
-                step="1e-6"
-                value={localIEFreq}
-                onChange={(e) => setLocalIEFreq(e.target.value)}
-                onBlur={handleUpdateIE}
-                onKeyDown={(e) => e.key === 'Enter' && handleUpdateIE()}
-                disabled={!!localLinkedFaultTreeId}
-                placeholder={localLinkedFaultTreeId ? (locale === 'ja' ? 'FTから計算' : 'From FT') : '0.0'}
-              />
-            </div>
+            {isCreatingNew ? (
+              <div style={{ padding: '12px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-green)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ fontWeight: 600, fontSize: '12px', color: 'var(--accent-green)' }}>
+                  {locale === 'ja' ? '起因事象の新規作成' : 'Create New Initiating Event'}
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">{locale === 'ja' ? 'ID (英字等)' : 'ID (Code)'}</label>
+                  <input
+                    className="form-input td-mono"
+                    value={newIECode}
+                    onChange={(e) => setNewIECode(e.target.value.toUpperCase())}
+                    placeholder="e.g. LOCA"
+                  />
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">{locale === 'ja' ? '名称' : 'Name'}</label>
+                  <input
+                    className="form-input"
+                    value={newIEName}
+                    onChange={(e) => setNewIEName(e.target.value)}
+                    placeholder={locale === 'ja' ? '起因事象名を入力' : 'Enter IE name'}
+                  />
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">{locale === 'ja' ? '発生頻度 [/yr]' : 'Frequency [/yr]'}</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    step="1e-6"
+                    value={newIEFreq}
+                    onChange={(e) => setNewIEFreq(e.target.value)}
+                    placeholder="1.0e-3"
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                  <button
+                    className="btn btn--primary btn--sm"
+                    style={{ flex: 1 }}
+                    onClick={() => {
+                      if (!newIECode || !newIEName) {
+                        alert(locale === 'ja' ? 'IDと名称を入力してください' : 'Please enter ID and Name');
+                        return;
+                      }
+                      const newId = `IE_${Date.now()}`;
+                      const freq = parseFloat(newIEFreq) || 1.0e-3;
+                      addInitiatingEvent({
+                        id: newId,
+                        name: newIEName,
+                        code: newIECode,
+                        frequency: freq,
+                        linkedFaultTreeId: ''
+                      });
+                      if (selectedEventTreeId) {
+                        updateEventTree(selectedEventTreeId, { initiatingEventId: newId });
+                      }
+                      setIsCreatingNew(false);
+                      setNewIECode('');
+                      setNewIEName('');
+                      setNewIEFreq('1.0e-3');
+                    }}
+                  >
+                    {locale === 'ja' ? '作成して適用' : 'Create & Apply'}
+                  </button>
+                  <button
+                    className="btn btn--secondary btn--sm"
+                    onClick={() => setIsCreatingNew(false)}
+                  >
+                    {locale === 'ja' ? 'キャンセル' : 'Cancel'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="form-group">
+                  <label className="form-label">{locale === 'ja' ? 'ID (英字等)' : 'ID (Code)'}</label>
+                  <input
+                    className="form-input td-mono"
+                    value={localCode}
+                    onChange={(e) => setLocalCode(e.target.value)}
+                    onBlur={handleUpdateIE}
+                    onKeyDown={(e) => e.key === 'Enter' && handleUpdateIE()}
+                    placeholder="e.g. LOCA"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{locale === 'ja' ? '起因事象名' : 'IE Name'}</label>
+                  <input
+                    className="form-input"
+                    value={localIELabel}
+                    onChange={(e) => setLocalIELabel(e.target.value)}
+                    onBlur={handleUpdateIE}
+                    onKeyDown={(e) => e.key === 'Enter' && handleUpdateIE()}
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">{locale === 'ja' ? '関連付けられたFault Tree' : 'Linked Fault Tree'}</label>
+                  <select
+                    className="form-select"
+                    value={localLinkedFaultTreeId}
+                    onChange={(e) => {
+                      setLocalLinkedFaultTreeId(e.target.value);
+                      if (selectedNodeId) {
+                        updateInitiatingEvent(selectedNodeId, { linkedFaultTreeId: e.target.value });
+                      }
+                    }}
+                  >
+                    <option value="">{locale === 'ja' ? '未選択 (手入力頻度を使用)' : 'None (Use manual frequency)'}</option>
+                    {model.faultTrees?.map(ft => (
+                      <option key={ft.id} value={ft.id}>{ft.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">{locale === 'ja' ? '発生頻度 [/yr]' : 'Frequency [/yr]'}</label>
+                  <input
+                    className="form-input"
+                    type="number"
+                    step="1e-6"
+                    value={localIEFreq}
+                    onChange={(e) => setLocalIEFreq(e.target.value)}
+                    onBlur={handleUpdateIE}
+                    onKeyDown={(e) => e.key === 'Enter' && handleUpdateIE()}
+                    disabled={!!localLinkedFaultTreeId}
+                    placeholder={localLinkedFaultTreeId ? (locale === 'ja' ? 'FTから計算' : 'From FT') : '0.0'}
+                  />
+                </div>
+              </>
+            )}
           </>
         )}
       </div>

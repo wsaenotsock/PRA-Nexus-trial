@@ -378,6 +378,12 @@ body {
   border-radius: var(--radius-md);
 }
 
+.canvas-area .react-flow__minimap-mask {
+  fill: var(--bg-mask) !important;
+  stroke: var(--accent-green) !important;
+  stroke-width: 2px;
+}
+
 .canvas-area .react-flow__controls {
   border-radius: var(--radius-md);
   overflow: hidden;

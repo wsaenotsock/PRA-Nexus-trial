@@ -268,7 +268,17 @@ export function calculateProbability(
 }
 
 // ===== Extract MCS from BDD =====
-export function extractMCS(node: BDDNode, currentPath: string[] = [], allPaths: string[][] = []): string[][] {
+export function extractMCS(
+  node: BDDNode, 
+  probabilities?: Map<string, number>,
+  currentPath: string[] = [], 
+  allPaths: string[][] = [],
+  currentProb: number = 1.0,
+  cutoff: number = 1e-15,
+  maxCount: number = 3000
+): string[][] {
+  if (allPaths.length >= maxCount) return allPaths; // 最大件数に達したら打ち切り
+
   if (node === TRUE_NODE) {
     allPaths.push([...currentPath]);
     return allPaths;
@@ -276,12 +286,18 @@ export function extractMCS(node: BDDNode, currentPath: string[] = [], allPaths: 
   if (node === FALSE_NODE) return allPaths;
 
   // High branch: variable is in the cut set
-  currentPath.push(node.variable);
-  extractMCS(node.high!, currentPath, allPaths);
-  currentPath.pop();
+  const varProb = probabilities?.get(node.variable) ?? 1.0;
+  const nextProb = currentProb * varProb;
 
-  // Low branch: variable is not in the cut set
-  extractMCS(node.low!, currentPath, allPaths);
+  // 枝刈り：確率が極小なしきい値を下回るパスは探索を打ち切る
+  if (probabilities === undefined || nextProb >= cutoff) {
+    currentPath.push(node.variable);
+    extractMCS(node.high!, probabilities, currentPath, allPaths, nextProb, cutoff, maxCount);
+    currentPath.pop();
+  }
+
+  // Low branch: variable is not in the cut set (確率減少なし)
+  extractMCS(node.low!, probabilities, currentPath, allPaths, currentProb, cutoff, maxCount);
 
   return allPaths;
 }
@@ -480,26 +496,33 @@ export function calculateAnalyticalProbability(
   allFaultTrees: FaultTree[] = [],
   visited: Set<string> = new Set()
 ): number {
-  if (visited.has(gateId)) return 0;
+  if (visited.has(gateId)) return 0; // 現在の垂直探索パス（スタック）内の循環参照を検出し無限ループを防止
   visited.add(gateId);
 
   const gate = gates.find(g => g.id === gateId);
   if (!gate) {
-    // Check if it's a basic event
+    // 基本事象の場合は、他の別パスからの重複参照を許容するためバックトラックしてから確率を返却
+    visited.delete(gateId);
     return probabilities.get(gateId) ?? 0;
   }
 
   if (gate.type === 'TRANSFER' && gate.linkedFaultTreeId) {
     const linkedFT = allFaultTrees.find(f => f.id === gate.linkedFaultTreeId);
     if (linkedFT) {
-      return calculateAnalyticalProbability(linkedFT.topGateId, linkedFT.gates, probabilities, allFaultTrees, visited);
+      const prob = calculateAnalyticalProbability(linkedFT.topGateId, linkedFT.gates, probabilities, allFaultTrees, visited);
+      visited.delete(gateId);
+      return prob;
     }
+    visited.delete(gateId);
     return 0;
   }
 
   const childProbs = gate.children.map(childId => {
     return calculateAnalyticalProbability(childId, gates, probabilities, allFaultTrees, visited);
   });
+
+  // このゲートの探索を抜けるため、visitedから削除（バックトラック）
+  visited.delete(gateId);
 
   if (childProbs.length === 0) return 0;
 
@@ -687,60 +710,8 @@ export function quantifyFaultTree(
   // Get variable ordering
   const variableOrder = getVariableOrder(faultTree.topGateId, faultTree.gates, basicEvents, allFaultTrees);
 
-  // ----- MegaTree Analytical Fallback for out-of-memory prevention -----
-  if (variableOrder.length > 35) {
-    // 500変数などの超巨大ツリーの場合、BDD全構築によるメモリ枯渇を防止するため、
-    // BDDを一切介さず解析定量化(Analytical Evaluation)と代表MCS生成を行います。
-    const topEventProbability = calculateAnalyticalProbability(
-      faultTree.topGateId,
-      faultTree.gates,
-      probabilities,
-      allFaultTrees
-    );
-
-    // 確率の高い順に基本事象をピックアップした単一（1次）カットセットを生成
-    const cutSets: CutSet[] = [...basicEvents]
-      .map(be => ({ id: be.id, p: probabilities.get(be.id) ?? 0 }))
-      .filter(be => be.p > 0 && !be.id.startsWith('VG_')) // 仮想ゲートなどは除外
-      .sort((a, b) => b.p - a.p)
-      .slice(0, 100)
-      .map(evt => ({
-        events: [evt.id],
-        probability: evt.p,
-        order: 1
-      }));
-
-    const topEventProbabilityApprox = cutSets.reduce((acc, cs) => Math.min(acc + cs.probability, 1), 0);
-
-    // 簡易的な重要度分析を構築
-    const importanceMeasures: ImportanceMeasure[] = [...basicEvents]
-      .map(be => {
-        const p = probabilities.get(be.id) ?? 0;
-        return {
-          eventId: be.id,
-          eventName: be.name,
-          fv: p, // 確率をそのまま簡易的な影響度にする
-          raw: 1.0,
-          rrw: 1.0,
-          birnbaum: p
-        };
-      })
-      .sort((a, b) => b.fv - a.fv)
-      .slice(0, 100);
-
-    const computeTimeMs = performance.now() - startTime;
-
-    return {
-      topEventProbability,
-      topEventProbabilityApprox,
-      cutSets,
-      importanceMeasures,
-      totalRiskBDD: TRUE_NODE, // BDDは作らずTRUE_NODEを代入
-      computeTimeMs,
-      method: 'analytical_approx',
-      baseProbabilities: Object.fromEntries(probabilities),
-    };
-  }
+  // 500変数超の巨大フォルトツリーであっても、厳密なROBDD（Binary Decision Diagram）を構築し、
+  // 数学的に重複事象や共通原因を完全に処理した厳密なBDD定量化結果を返却します。
 
   // Build optimized BDD using Sifting (incorporating DFS and Sifting)
   const { bestRoot: bddRoot } = siftingOptimize(
@@ -755,7 +726,7 @@ export function quantifyFaultTree(
   const topEventProbability = calculateProbability(bddRoot, probabilities);
 
   // Extract MCS
-  const rawCutSets = extractMCS(bddRoot);
+  const rawCutSets = extractMCS(bddRoot, probabilities, [], [], 1.0, 1e-15, 3000);
   const minimalCutSets = minimizeCutSets(rawCutSets);
 
   // Create CutSet objects with probabilities

@@ -927,6 +927,8 @@ export default function FaultTreeCanvas({
         nodesDraggable={!isLocked}
         nodesConnectable={!isLocked}
         elementsSelectable={!isLocked}
+        minZoom={0.01}
+        maxZoom={4}
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="var(--text-muted)" />
         <Panel position="bottom-left">
@@ -945,8 +947,6 @@ export default function FaultTreeCanvas({
             }
             return '#94A3B8';
           }}
-          maskColor="var(--bg-mask)"
-          maskStrokeColor="var(--accent-green)"
           style={{ 
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border-default)',
