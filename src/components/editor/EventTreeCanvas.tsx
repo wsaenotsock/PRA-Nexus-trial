@@ -315,8 +315,8 @@ export default function EventTreeCanvas({
                     setHoveredLineKey(null);
                     setHoveredHeader(null);
                   }}
-                  onClick={(e) => { onNodeSelect(currentFe.id, 'functionalEvent'); handleLineClick(e, sequences[subIndices[0]].id, currentFe.id, true); }}
-                  onContextMenu={(e) => { onNodeSelect(currentFe.id, 'functionalEvent'); handleLineClick(e, sequences[subIndices[0]].id, currentFe.id, true); }}
+                  onClick={(e) => { e.stopPropagation(); onNodeSelect(currentFe.id, 'functionalEvent'); }}
+                  onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onNodeSelect(currentFe.id, 'functionalEvent'); handleLineClick(e, sequences[subIndices[0]].id, currentFe.id, true); }}
                 />
               );
             });
@@ -333,8 +333,8 @@ export default function EventTreeCanvas({
                   setHoveredLineKey(null);
                   setHoveredHeader(null);
                 }}
-                onClick={(e) => { onNodeSelect(currentFe.id, 'functionalEvent'); handleLineClick(e, sequences[topSeqIndex].id, currentFe.id, false); }}
-                onContextMenu={(e) => { onNodeSelect(currentFe.id, 'functionalEvent'); handleLineClick(e, sequences[topSeqIndex].id, currentFe.id, false); }}
+                onClick={(e) => { e.stopPropagation(); onNodeSelect(currentFe.id, 'functionalEvent'); }}
+                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onNodeSelect(currentFe.id, 'functionalEvent'); handleLineClick(e, sequences[topSeqIndex].id, currentFe.id, false); }}
               />
             );
           }
@@ -344,7 +344,7 @@ export default function EventTreeCanvas({
   }
 
   return (
-    <div ref={containerRef} className="event-tree-canvas" style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', cursor: isDragging ? 'grabbing' : 'default' }} onWheel={handleWheel} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp}>
+    <div ref={containerRef} className="event-tree-canvas" style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden', cursor: isDragging ? 'grabbing' : 'default' }} onWheel={handleWheel} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} onClick={() => onNodeSelect(null, null)}>
       <svg 
         ref={svgRef}
         width="100%" 
@@ -360,7 +360,6 @@ export default function EventTreeCanvas({
               onClick={(e) => { 
                 e.stopPropagation(); 
                 onNodeSelect(fe.id, 'functionalEvent'); 
-                setHeaderContextMenu({ x: e.clientX, y: e.clientY, index: i + 1, feId: fe.id });
               }}
               onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setHeaderContextMenu({ x: e.clientX, y: e.clientY, index: i + 1, feId: fe.id }); }}
               onMouseEnter={() => setHoveredHeader(fe.id)}
@@ -398,7 +397,6 @@ export default function EventTreeCanvas({
               e.stopPropagation(); 
               if (et?.initiatingEventId) {
                 onNodeSelect(et.initiatingEventId, 'initiatingEvent');
-                setHeaderContextMenu({ x: e.clientX, y: e.clientY, index: 0 });
               }
             }}
             onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); setHeaderContextMenu({ x: e.clientX, y: e.clientY, index: 0 }); }}
@@ -415,7 +413,14 @@ export default function EventTreeCanvas({
               style={{ transition: 'all 0.2s' }} 
             />
             <rect x={0} y={0} width={INIT_EVENT_COL_WIDTH} height={HEADER_HEIGHT} fill="none" stroke={hoveredHeader === 'init' ? 'var(--accent-blue)' : 'var(--border-default)'} strokeWidth={hoveredHeader === 'init' ? 2 : 1} />
-            <text x={INIT_EVENT_COL_WIDTH / 2} y={HEADER_HEIGHT / 2 + 5} textAnchor="middle" fill="var(--accent-green)" style={{ fontWeight: 600, fontSize: '11px' }}>INIT EVENT</text>
+            {(() => {
+              const ie = model.initiatingEvents?.find(x => x.id === et?.initiatingEventId);
+              return (
+                <text x={INIT_EVENT_COL_WIDTH / 2} y={HEADER_HEIGHT / 2 + 5} textAnchor="middle" fill="var(--accent-green)" style={{ fontWeight: 600, fontSize: '11px' }}>
+                  {ie ? ie.name : (locale === 'ja' ? '起因事象' : 'INIT EVENT')}
+                </text>
+              );
+            })()}
 
             {et?.initiatingEventId && (
               (() => {
@@ -570,7 +575,7 @@ export default function EventTreeCanvas({
           <button className="context-menu__item" onClick={() => setHeaderContextMenu(null)}>{locale === 'ja' ? 'キャンセル' : 'Cancel'}</button>
         </div>
       )}
-      {headerContextMenu && <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }} onClick={() => setHeaderContextMenu(null)} />}
+      {headerContextMenu && <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }} onClick={() => { setHeaderContextMenu(null); onNodeSelect(null, null); }} />}
 
       {contextMenu && (
         <div className="context-menu" style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y, zIndex: 1000 }} onClick={(e) => e.stopPropagation()}>
@@ -583,7 +588,7 @@ export default function EventTreeCanvas({
           <button className="context-menu__item" onClick={() => setContextMenu(null)}>{locale === 'ja' ? 'キャンセル' : 'Cancel'}</button>
         </div>
       )}
-      {contextMenu && <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }} onClick={() => setContextMenu(null)} />}
+      {contextMenu && <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }} onClick={() => { setContextMenu(null); onNodeSelect(null, null); }} />}
     </div>
   );
 }

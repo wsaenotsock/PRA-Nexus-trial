@@ -1006,7 +1006,7 @@ function createDefaultModel(): PRAModel {
       "uncertaintyEnabled": true
     },
     "quantificationSettings": {
-      "cutOff": 1e-9,
+      "cutOff": 1e-20,
       "approximation": "bdd_exact",
       "monteCarloSamples": 10000,
       "useLHS": true,
@@ -1085,7 +1085,26 @@ export const useModelStore = create<ModelState>((set, get) => ({
   past: [],
   future: [],
 
-  setModel: (model) => set({ model, isDirty: false, past: [], future: [] }),
+  setModel: (model) => {
+    const updatedModel = { ...model };
+    if (updatedModel.quantificationSettings) {
+      if (updatedModel.quantificationSettings.cutOff === 1e-9 || !updatedModel.quantificationSettings.cutOff) {
+        updatedModel.quantificationSettings = {
+          ...updatedModel.quantificationSettings,
+          cutOff: 1e-20
+        };
+      }
+    } else {
+      updatedModel.quantificationSettings = {
+        cutOff: 1e-20,
+        approximation: 'bdd_exact',
+        monteCarloSamples: 10000,
+        useLHS: true,
+        runUncertainty: false
+      };
+    }
+    set({ model: updatedModel, isDirty: false, past: [], future: [] });
+  },
 
   selectFaultTree: (id) => set({ selectedFaultTreeId: id }),
   selectEventTree: (id) => set({ selectedEventTreeId: id }),
@@ -2117,12 +2136,14 @@ export const useModelStore = create<ModelState>((set, get) => ({
         if (!parsed.seismicSettings.selectedETIds) parsed.seismicSettings.selectedETIds = [];
         if (!parsed.quantificationSettings) {
           parsed.quantificationSettings = {
-            cutOff: 1e-9,
+            cutOff: 1e-20,
             approximation: 'bdd_exact',
             monteCarloSamples: 10000,
             useLHS: true,
             runUncertainty: false
           };
+        } else if (parsed.quantificationSettings.cutOff === 1e-9 || !parsed.quantificationSettings.cutOff) {
+          parsed.quantificationSettings.cutOff = 1e-20;
         }
 
         const model: PRAModel = {

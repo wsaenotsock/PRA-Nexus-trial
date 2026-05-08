@@ -13,7 +13,7 @@ interface QuantificationPanelProps {
 export default function QuantificationPanel({ locale, onNavigateToResults }: QuantificationPanelProps) {
   const model = useModelStore(s => s.model);
   const settings = model.quantificationSettings || {
-    cutOff: 1e-9,
+    cutOff: 1e-20,
     approximation: 'bdd_exact',
     monteCarloSamples: 10000,
     useLHS: true,

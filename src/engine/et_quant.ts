@@ -86,22 +86,33 @@ export function quantifyEventTree(
   // 4. Build Sequence BDDs
   const sequenceResults: SequenceResult[] = [];
   const endStateFreqMap = new Map<string, number>();
+  
+  // Pre-initialize all model end states to 0 so that chained/transfer target end states render with 0.00e+0 instead of N/A in the results dashboard
+  model.endStates.forEach(es => {
+    endStateFreqMap.set(es.id, 0);
+  });
+
   const sequenceBDDs: Record<string, any> = {};
   let totalRiskBDD = FALSE_NODE;
 
-  for (const seq of et.sequences) {
-    let seqBDD = ieBDD;
-    let pathDesc = '';
+  const evaluateSequence = (
+    seq: any, 
+    parentBDD: BDDNode, 
+    parentPathDesc: string, 
+    currentEt: EventTree
+  ) => {
+    let seqBDD = parentBDD;
+    let pathDesc = parentPathDesc;
 
     for (const decision of seq.path) {
-      const fe = et.functionalEvents.find(f => f.id === decision.functionalEventId);
+      const fe = currentEt.functionalEvents.find(f => f.id === decision.functionalEventId);
       if (!fe) continue;
 
       const branch = fe.branches.find(b => b.id === decision.branchId);
       if (!branch) continue;
 
       const branchDisplay = branch.description || branch.label;
-      pathDesc += `${fe.name}(${branchDisplay}) `;
+      pathDesc += (pathDesc && !pathDesc.endsWith('➡ ') ? ' ➔ ' : '') + `${fe.name}(${branchDisplay})`;
 
       let branchBDD: BDDNode = FALSE_NODE;
       
@@ -123,8 +134,16 @@ export function quantifyEventTree(
         
         branchBDD = makeBDDNode(virtualId, TRUE_NODE, FALSE_NODE);
         if (branchIndex === 1) {
-          // Failure branch is the complement
-          branchBDD = bddNot(branchBDD);
+          // If the failure branch has an explicit probability set by the user, use it directly instead of forcing complement
+          const failProb = fe.branches[1]?.probability;
+          if (failProb !== undefined && failProb !== null) {
+            const failId = `MANUAL_${fe.id}_FAIL`;
+            probabilities.set(failId, failProb);
+            branchBDD = makeBDDNode(failId, TRUE_NODE, FALSE_NODE);
+          } else {
+            // Otherwise, fall back to success complement
+            branchBDD = bddNot(branchBDD);
+          }
         } else if (branchIndex > 1) {
           // Fallback for multi-branch manual
           const multiId = `MANUAL_${fe.id}_B${branchIndex}`;
@@ -134,6 +153,17 @@ export function quantifyEventTree(
       }
 
       seqBDD = bddAnd(seqBDD, branchBDD);
+    }
+
+    // もしトランスファー先ETが指定されていれば、再帰的に移行先ETを展開して計算！
+    if (seq.transferETId) {
+      const subEt = model.eventTrees?.find(t => t.id === seq.transferETId);
+      if (subEt) {
+        for (const subSeq of subEt.sequences) {
+          evaluateSequence(subSeq, seqBDD, `${pathDesc.trim()} ➡ `, subEt);
+        }
+        return; // 中継点シーケンス自体の終状態集計はスキップ（トランスファー先へ全権委任）
+      }
     }
 
     sequenceBDDs[seq.id] = seqBDD;
@@ -185,6 +215,11 @@ export function quantifyEventTree(
       const current = endStateFreqMap.get(seq.endStateId) || 0;
       endStateFreqMap.set(seq.endStateId, current + seqFreq);
     }
+  };
+
+  // メインETの全初期シーケンスを開始
+  for (const seq of et.sequences) {
+    evaluateSequence(seq, ieBDD, '', et);
   }
 
   // 6. Aggregate Results

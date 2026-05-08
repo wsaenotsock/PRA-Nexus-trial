@@ -237,6 +237,81 @@ export default function Home() {
     setTimeout(() => setShowSaveToast(false), 2000);
   }, [saveToLocalStorage]);
 
+  // Export Model
+  const handleExportModel = useCallback(async () => {
+    const defaultName = `${model.name || 'PRA_Model'}_${new Date().toISOString().slice(0, 10)}.json`;
+    const dataStr = JSON.stringify(model, null, 2);
+
+    // Try modern File System Access API (showSaveFilePicker) first for Explorer Dialog
+    if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: defaultName,
+          types: [{
+            description: 'JSON Files',
+            accept: {
+              'application/json': ['.json'],
+            },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(dataStr);
+        await writable.close();
+        return; // Success!
+      } catch (err) {
+        if ((err as Error).name === 'AbortError') return; // Cancelled by user
+        console.error('File System Access API failed, falling back...', err);
+      }
+    }
+
+    // Fallback: Standard browser download
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = defaultName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [model]);
+
+  // Import Model
+  const handleImportModel = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const imported = JSON.parse(event.target?.result as string);
+        if (!imported || typeof imported !== 'object') {
+          throw new Error(locale === 'ja' ? '無効なJSON形式です' : 'Invalid JSON format');
+        }
+        if (!imported.faultTrees || !imported.eventTrees) {
+          throw new Error(locale === 'ja' ? '有効なPRAモデルデータではありません' : 'Not a valid PRA model data');
+        }
+
+        useModelStore.getState().setModel(imported);
+
+        const { activeProjectId } = useProjectStore.getState();
+        if (activeProjectId) {
+          fetch(`/api/projects/${activeProjectId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: imported }),
+          }).catch(console.error);
+        }
+
+        alert(locale === 'ja' ? 'モデルを正常にインポートしました！' : 'Model imported successfully!');
+      } catch (err) {
+        alert(err instanceof Error ? err.message : 'Import failed');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }, [locale]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -442,6 +517,8 @@ export default function Home() {
     quantify: locale === 'ja' ? '⚛ 定量化実行' : '⚛ Quantify',
     save: locale === 'ja' ? '💾 一時保存' : '💾 Save',
     projectManager: locale === 'ja' ? '📁 プロジェクト管理' : '📁 Projects',
+    exportModel: locale === 'ja' ? '📤 モデル出力' : '📤 Export Model',
+    importModel: locale === 'ja' ? '📥 モデル入力' : '📥 Import Model',
     editor: locale === 'ja' ? 'FTエディタ' : 'FT Editor',
     results: locale === 'ja' ? '結果' : 'Results',
     data: locale === 'ja' ? 'データ' : 'Data',
@@ -473,7 +550,20 @@ export default function Home() {
           <div className="tabs" style={{ background: 'var(--bg-primary)' }}>
             <button className={`tab ${viewMode === 'editor' ? 'tab--active' : ''}`} onClick={() => { setViewMode('editor'); setEditorType('FT'); }}>{t.editor}</button>
             <button className={`tab ${viewMode === 'et_editor' ? 'tab--active' : ''}`} onClick={() => { setViewMode('et_editor'); setEditorType('ET'); }}>{t.etEditor}</button>
-            <button className={`tab ${viewMode === 'split' ? 'tab--active' : ''}`} onClick={() => setViewMode('split')}>{t.split}</button>
+            <button 
+              className={`tab ${viewMode === 'split' ? 'tab--active' : ''}`} 
+              onClick={() => {
+                if (viewMode === 'split') {
+                  setViewMode(editorType === 'ET' ? 'et_editor' : 'editor');
+                } else {
+                  setViewMode('split');
+                }
+              }}
+            >
+              {viewMode === 'split' 
+                ? (locale === 'ja' ? '分割解除' : 'Unsplit') 
+                : t.split}
+            </button>
             <button className={`tab ${viewMode === 'quantification' ? 'tab--active' : ''}`} onClick={() => setViewMode('quantification')}>{t.quantification}</button>
             <button className={`tab ${viewMode === 'results' ? 'tab--active' : ''}`} onClick={() => setViewMode('results')}>{t.results}</button>
             <button className={`tab ${viewMode === 'report' ? 'tab--active' : ''}`} onClick={() => setViewMode('report')}>{t.report}</button>
@@ -564,6 +654,31 @@ export default function Home() {
           >
             {t.projectManager}
           </button>
+
+          {/* Model Export / Import */}
+          <button
+            className="btn btn--secondary"
+            onClick={handleExportModel}
+            title={locale === 'ja' ? '現在のモデルをJSONファイルとして保存します' : 'Export current model as JSON'}
+            style={{ fontWeight: 600 }}
+          >
+            {t.exportModel}
+          </button>
+          <button
+            className="btn btn--secondary"
+            onClick={() => document.getElementById('model-import-input')?.click()}
+            title={locale === 'ja' ? 'JSONファイルからモデルを読み込みます' : 'Import model from JSON file'}
+            style={{ fontWeight: 600 }}
+          >
+            {t.importModel}
+          </button>
+          <input
+            id="model-import-input"
+            type="file"
+            accept=".json"
+            style={{ display: 'none' }}
+            onChange={handleImportModel}
+          />
 
           <div className="toolbar__separator" />
 
@@ -704,6 +819,39 @@ export default function Home() {
         )}
 
         {/* Results Panel */}
+        {/* Sidebar (Property Panel + Validation) */}
+        {(viewMode === 'editor' || viewMode === 'et_editor' || (viewMode === 'split' && selectedNodeId)) && (
+          <div style={{
+            width: 320,
+            display: 'flex',
+            flexDirection: 'column',
+            borderLeft: '1px solid var(--border-default)',
+            background: 'var(--bg-primary)'
+          }}>
+            <div style={{ flex: '0 1 auto', overflowY: 'auto', borderBottom: '1px solid var(--border-default)' }}>
+              {(viewMode === 'editor' || (viewMode === 'split' && editorType === 'FT')) && (
+                <PropertyPanel
+                  selectedNodeId={selectedNodeId}
+                  selectedNodeType={selectedNodeType}
+                  selectedFaultTreeId={selectedFaultTreeId}
+                  locale={locale}
+                />
+              )}
+              {(viewMode === 'et_editor' || (viewMode === 'split' && editorType === 'ET')) && (
+                <ETPropertyPanel
+                  selectedNodeId={selectedNodeId}
+                  selectedNodeType={selectedNodeType}
+                  locale={locale}
+                />
+              )}
+            </div>
+            <div style={{ flex: '1 1 auto', overflowY: 'auto' }}>
+              <ValidationPanel locale={locale} />
+            </div>
+          </div>
+        )}
+
+        {/* Results Panel */}
         {(viewMode === 'results' || viewMode === 'split') && (
           <div style={{
             width: viewMode === 'split' ? '45%' : '100%',
@@ -743,7 +891,7 @@ export default function Home() {
                   ].map(opt => (
                     <label key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px' }}>
                       <input 
-                        type="checkbox" 
+                         type="checkbox" 
                         checked={(reportOptions as any)[opt.id]} 
                         onChange={(e) => setReportOptions({ ...reportOptions, [opt.id]: e.target.checked })}
                       />
@@ -769,38 +917,6 @@ export default function Home() {
               <div style={{ maxWidth: '900px', margin: '0 auto', boxShadow: '0 20px 50px rgba(0,0,0,0.1)', background: 'white' }}>
                 <AnalysisReport locale={locale} options={reportOptions} />
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Sidebar (Property Panel + Validation) */}
-        {(viewMode === 'editor' || viewMode === 'et_editor') && (
-          <div style={{
-            width: 320,
-            display: 'flex',
-            flexDirection: 'column',
-            borderLeft: '1px solid var(--border-default)',
-            background: 'var(--bg-primary)'
-          }}>
-            <div style={{ flex: '0 1 auto', overflowY: 'auto', borderBottom: '1px solid var(--border-default)' }}>
-              {viewMode === 'editor' && (
-                <PropertyPanel
-                  selectedNodeId={selectedNodeId}
-                  selectedNodeType={selectedNodeType}
-                  selectedFaultTreeId={selectedFaultTreeId}
-                  locale={locale}
-                />
-              )}
-              {viewMode === 'et_editor' && (
-                <ETPropertyPanel
-                  selectedNodeId={selectedNodeId}
-                  selectedNodeType={selectedNodeType}
-                  locale={locale}
-                />
-              )}
-            </div>
-            <div style={{ flex: '1 1 auto', overflowY: 'auto' }}>
-              <ValidationPanel locale={locale} />
             </div>
           </div>
         )}

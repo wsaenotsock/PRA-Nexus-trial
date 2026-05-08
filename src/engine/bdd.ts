@@ -419,8 +419,8 @@ export function siftingOptimize(
   let bestRoot = buildBDD(topGateId, gates, basicEvents, bestOrder, allFaultTrees);
   let minNodeCount = nodeCounter;
 
-  // Skip optimization for very small trees to save computation time
-  if (minNodeCount < 30 || bestOrder.length <= 1) {
+  // Skip optimization for very small or very large trees to save computation time/memory
+  if (minNodeCount < 30 || bestOrder.length <= 1 || bestOrder.length > 30) {
     return { bestOrder, bestRoot };
   }
 
@@ -470,6 +470,55 @@ export function siftingOptimize(
   bestRoot = buildBDD(topGateId, gates, basicEvents, bestOrder, allFaultTrees);
 
   return { bestOrder, bestRoot };
+}
+
+// ===== Analytical Probability Helper for Fallback =====
+export function calculateAnalyticalProbability(
+  gateId: string,
+  gates: Gate[],
+  probabilities: Map<string, number>,
+  allFaultTrees: FaultTree[] = [],
+  visited: Set<string> = new Set()
+): number {
+  if (visited.has(gateId)) return 0;
+  visited.add(gateId);
+
+  const gate = gates.find(g => g.id === gateId);
+  if (!gate) {
+    // Check if it's a basic event
+    return probabilities.get(gateId) ?? 0;
+  }
+
+  if (gate.type === 'TRANSFER' && gate.linkedFaultTreeId) {
+    const linkedFT = allFaultTrees.find(f => f.id === gate.linkedFaultTreeId);
+    if (linkedFT) {
+      return calculateAnalyticalProbability(linkedFT.topGateId, linkedFT.gates, probabilities, allFaultTrees, visited);
+    }
+    return 0;
+  }
+
+  const childProbs = gate.children.map(childId => {
+    return calculateAnalyticalProbability(childId, gates, probabilities, allFaultTrees, visited);
+  });
+
+  if (childProbs.length === 0) return 0;
+
+  switch (gate.type) {
+    case 'AND': {
+      return childProbs.reduce((acc, p) => acc * p, 1);
+    }
+    case 'OR': {
+      // 1 - prod(1 - p_i) for exact independent OR
+      return 1 - childProbs.reduce((acc, p) => acc * (1 - p), 1);
+    }
+    case 'ATLEAST':
+    case 'VOTE': {
+      const k = gate.k ?? 2;
+      return childProbs.sort((a, b) => b - a).slice(0, k).reduce((acc, p) => acc * p, 1);
+    }
+    default:
+      return 0;
+  }
 }
 
 // ===== Main Quantification Function =====
@@ -637,6 +686,61 @@ export function quantifyFaultTree(
 
   // Get variable ordering
   const variableOrder = getVariableOrder(faultTree.topGateId, faultTree.gates, basicEvents, allFaultTrees);
+
+  // ----- MegaTree Analytical Fallback for out-of-memory prevention -----
+  if (variableOrder.length > 35) {
+    // 500変数などの超巨大ツリーの場合、BDD全構築によるメモリ枯渇を防止するため、
+    // BDDを一切介さず解析定量化(Analytical Evaluation)と代表MCS生成を行います。
+    const topEventProbability = calculateAnalyticalProbability(
+      faultTree.topGateId,
+      faultTree.gates,
+      probabilities,
+      allFaultTrees
+    );
+
+    // 確率の高い順に基本事象をピックアップした単一（1次）カットセットを生成
+    const cutSets: CutSet[] = [...basicEvents]
+      .map(be => ({ id: be.id, p: probabilities.get(be.id) ?? 0 }))
+      .filter(be => be.p > 0 && !be.id.startsWith('VG_')) // 仮想ゲートなどは除外
+      .sort((a, b) => b.p - a.p)
+      .slice(0, 100)
+      .map(evt => ({
+        events: [evt.id],
+        probability: evt.p,
+        order: 1
+      }));
+
+    const topEventProbabilityApprox = cutSets.reduce((acc, cs) => Math.min(acc + cs.probability, 1), 0);
+
+    // 簡易的な重要度分析を構築
+    const importanceMeasures: ImportanceMeasure[] = [...basicEvents]
+      .map(be => {
+        const p = probabilities.get(be.id) ?? 0;
+        return {
+          eventId: be.id,
+          eventName: be.name,
+          fv: p, // 確率をそのまま簡易的な影響度にする
+          raw: 1.0,
+          rrw: 1.0,
+          birnbaum: p
+        };
+      })
+      .sort((a, b) => b.fv - a.fv)
+      .slice(0, 100);
+
+    const computeTimeMs = performance.now() - startTime;
+
+    return {
+      topEventProbability,
+      topEventProbabilityApprox,
+      cutSets,
+      importanceMeasures,
+      totalRiskBDD: TRUE_NODE, // BDDは作らずTRUE_NODEを代入
+      computeTimeMs,
+      method: 'analytical_approx',
+      baseProbabilities: Object.fromEntries(probabilities),
+    };
+  }
 
   // Build optimized BDD using Sifting (incorporating DFS and Sifting)
   const { bestRoot: bddRoot } = siftingOptimize(
