@@ -41,6 +41,9 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
         const isFT = faultTrees.some(f => f.id === id);
         const result = await runWorkerCommand<any>(isFT ? 'QUANTIFY_FT' : 'QUANTIFY_ET', { model, targetId: id });
         
+        // Save intermediate result so that subsequent RUN_MONTE_CARLO can access it via resultsStore
+        setResult(id, result);
+        
         if (settings.runUncertainty) {
           const mc = await runWorkerCommand<any>('RUN_MONTE_CARLO', { 
             targetType: 'total', 
@@ -49,9 +52,8 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
             useLHS: settings.useLHS 
           });
           result.uncertainty = mc;
+          setResult(id, result);
         }
-        
-        setResult(id, result);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Batch quantification failed');
@@ -145,6 +147,9 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
               try {
                 const result = await runWorkerCommand<any>(isFT ? 'QUANTIFY_FT' : 'QUANTIFY_ET', { model, targetId: target.id });
                 
+                // Save intermediate result so that subsequent RUN_MONTE_CARLO can access it via resultsStore
+                setResult(target.id, result);
+                
                 if (settings.runUncertainty) {
                   const mc = await runWorkerCommand<any>('RUN_MONTE_CARLO', { 
                     targetType: 'total', 
@@ -153,9 +158,8 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
                     useLHS: settings.useLHS 
                   });
                   result.uncertainty = mc;
+                  setResult(target.id, result);
                 }
-                
-                setResult(target.id, result);
               } catch (e) {
                 setError(e instanceof Error ? e.message : 'Quantification failed');
               } finally {

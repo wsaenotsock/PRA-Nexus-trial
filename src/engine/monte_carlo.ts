@@ -208,35 +208,47 @@ export function runMonteCarlo(
     });
   }
 
-  for (let i = 0; i < trials; i++) {
-    const probabilities = new Map<string, number>();
+  // Reuse Map objects to completely eliminate GC overhead in the high-frequency loop
+  const probabilities = new Map<string, number>();
+  const bddCache = new Map<number, number>();
 
-    // Sample all basic events
-    basicEvents.forEach(be => {
+  const numBEs = basicEvents.length;
+  const numIEs = model.initiatingEvents.length;
+  const baseProbEntries = baseProbabilities ? Object.entries(baseProbabilities) : [];
+
+  for (let i = 0; i < trials; i++) {
+    probabilities.clear();
+    bddCache.clear();
+
+    // Sample all basic events using native for loop for extreme speed
+    for (let b = 0; b < numBEs; b++) {
+      const be = basicEvents[b];
       const u = useLHS ? lhsMatrix.get(be.id)?.[i] : undefined;
       const base = (baseProbabilities?.[be.id] ?? be.probability) || 0;
       probabilities.set(be.id, sampleDistribution(base, be.distribution, u));
-    });
+    }
 
     // Sample all initiating events
-    model.initiatingEvents.forEach(ieItem => {
+    for (let ie = 0; ie < numIEs; ie++) {
+      const ieItem = model.initiatingEvents[ie];
       const u = useLHS ? lhsMatrix.get(ieItem.id)?.[i] : undefined;
       const base = baseProbabilities?.[ieItem.id] ?? ieItem.frequency;
       const sampledIEFreq = sampleDistribution(base, ieItem.distribution || { type: 'point' }, u);
       probabilities.set(ieItem.id, sampledIEFreq);
-    });
+    }
 
-    // Fill in other variables from baseProbabilities (MANUAL_ ET branches, CCF expanded events, etc.)
+    // Fill in other variables from baseProbabilities
     if (baseProbabilities) {
-      Object.entries(baseProbabilities).forEach(([id, val]) => {
+      for (let ep = 0; ep < baseProbEntries.length; ep++) {
+        const [id, val] = baseProbEntries[ep];
         if (!probabilities.has(id)) {
           probabilities.set(id, val);
         }
-      });
+      }
     }
 
-    // Calculate result for this trial
-    const result = calculateProbability(targetBDD, probabilities);
+    // Calculate result for this trial (reusing the cache Map object)
+    const result = calculateProbability(targetBDD, probabilities, bddCache);
     samples.push(result);
     sum += result;
   }

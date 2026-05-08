@@ -842,6 +842,10 @@ export default function Home() {
                   selectedNodeId={selectedNodeId}
                   selectedNodeType={selectedNodeType}
                   locale={locale}
+                  onNodeSelect={(id, type) => {
+                    setSelectedNodeId(id);
+                    setSelectedNodeType(type);
+                  }}
                 />
               )}
             </div>

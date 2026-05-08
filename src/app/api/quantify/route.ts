@@ -40,7 +40,8 @@ export async function POST(request: Request) {
           model.faultTrees || []
         );
         res.cutoff = model.quantificationSettings?.cutOff;
-        return NextResponse.json({ result: cleanResult(res) });
+        const finalRes = { ...res, isFaultTree: true, targetId } as any;
+        return NextResponse.json({ result: cleanResult(finalRes) });
       }
 
       case 'QUANTIFY_ET': {
@@ -51,7 +52,8 @@ export async function POST(request: Request) {
 
         const res = quantifyEventTree(et, model);
         res.cutoff = model.quantificationSettings?.cutOff;
-        return NextResponse.json({ result: cleanResult(res) });
+        const finalRes = { ...res, isFaultTree: false, targetId } as any;
+        return NextResponse.json({ result: cleanResult(finalRes) });
       }
 
       case 'QUANTIFY_SEISMIC': {
@@ -72,8 +74,9 @@ export async function POST(request: Request) {
         // Since cleanResult strips totalRiskBDD and sequenceBDDs to pass via JSON,
         // we must run FT or ET quantification first to get the local BDD nodes!
         let fullResult: QuantificationResult;
-        if (currentResult.isFaultTree) {
-          const ft = (model.faultTrees || []).find((f: any) => f.id === currentResult.targetId);
+        const isFT = currentResult.isFaultTree ?? (model.faultTrees || []).some((f: any) => f.id === (currentResult.targetId || currentResult.id));
+        if (isFT) {
+          const ft = (model.faultTrees || []).find((f: any) => f.id === (currentResult.targetId || currentResult.id));
           fullResult = quantifyFaultTree(
             ft,
             model.basicEvents || [],
@@ -135,8 +138,9 @@ export async function POST(request: Request) {
 
         // Re-generate full result with BDD for sensitivity calculation
         let fullResult: QuantificationResult;
-        if (currentResult.isFaultTree) {
-          const ft = (model.faultTrees || []).find((f: any) => f.id === currentResult.targetId);
+        const isFT = currentResult.isFaultTree ?? (model.faultTrees || []).some((f: any) => f.id === (currentResult.targetId || currentResult.id));
+        if (isFT) {
+          const ft = (model.faultTrees || []).find((f: any) => f.id === (currentResult.targetId || currentResult.id));
           fullResult = quantifyFaultTree(
             ft,
             model.basicEvents || [],

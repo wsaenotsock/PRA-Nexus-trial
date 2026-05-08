@@ -5,9 +5,10 @@ interface ETPropertyPanelProps {
   selectedNodeId: string | null;
   selectedNodeType: string | null;
   locale: 'ja' | 'en';
+  onNodeSelect?: (nodeId: string | null, nodeType: string | null) => void;
 }
 
-export default function ETPropertyPanel({ selectedNodeId, selectedNodeType, locale }: ETPropertyPanelProps) {
+export default function ETPropertyPanel({ selectedNodeId, selectedNodeType, locale, onNodeSelect }: ETPropertyPanelProps) {
   const model = useModelStore((s) => s.model);
   const selectedEventTreeId = useModelStore((s) => s.selectedEventTreeId);
   const updateFunctionalEvent = useModelStore((s) => s.updateFunctionalEvent);
@@ -58,7 +59,7 @@ export default function ETPropertyPanel({ selectedNodeId, selectedNodeType, loca
         setLocalLinkedFaultTreeId(ie.linkedFaultTreeId || '');
       }
     }
-  }, [selectedNodeId, selectedNodeType, currentET]);
+  }, [selectedNodeId, selectedNodeType, currentET, model.initiatingEvents]);
 
   if (!selectedNodeId || !currentET) {
     return (
@@ -324,6 +325,9 @@ export default function ETPropertyPanel({ selectedNodeId, selectedNodeType, loca
                     setIsCreatingNew(false);
                     if (selectedEventTreeId) {
                       updateEventTree(selectedEventTreeId, { initiatingEventId: val });
+                      if (onNodeSelect) {
+                        onNodeSelect(val, 'initiatingEvent');
+                      }
                     }
                   }
                 }}
@@ -389,6 +393,9 @@ export default function ETPropertyPanel({ selectedNodeId, selectedNodeType, loca
                       });
                       if (selectedEventTreeId) {
                         updateEventTree(selectedEventTreeId, { initiatingEventId: newId });
+                        if (onNodeSelect) {
+                          onNodeSelect(newId, 'initiatingEvent');
+                        }
                       }
                       setIsCreatingNew(false);
                       setNewIECode('');
