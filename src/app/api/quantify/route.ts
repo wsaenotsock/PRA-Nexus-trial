@@ -32,14 +32,18 @@ export async function POST(request: Request) {
         const ft = (model.faultTrees || []).find((f: any) => f.id === targetId);
         if (!ft) throw new Error(`Fault Tree not found: ${targetId}`);
 
+        const cutoffValue = model.quantificationSettings?.cutOff ?? 1e-15;
+        const maxCutsetsValue = model.quantificationSettings?.maxCutsets ?? 3000;
         const res = quantifyFaultTree(
           ft,
           model.basicEvents || [],
           model.parameters || [],
           model.ccfGroups || [],
-          model.faultTrees || []
+          model.faultTrees || [],
+          cutoffValue,
+          maxCutsetsValue
         );
-        res.cutoff = model.quantificationSettings?.cutOff;
+        res.cutoff = cutoffValue;
         const finalRes = { ...res, isFaultTree: true, targetId } as any;
         return NextResponse.json({ result: cleanResult(finalRes) });
       }
@@ -82,7 +86,9 @@ export async function POST(request: Request) {
             model.basicEvents || [],
             model.parameters || [],
             model.ccfGroups || [],
-            model.faultTrees || []
+            model.faultTrees || [],
+            model.quantificationSettings?.cutOff ?? 1e-15,
+            model.quantificationSettings?.maxCutsets ?? 3000
           );
         } else {
           const et = (model.eventTrees || []).find((e: any) => e.id === currentResult.targetId);
@@ -146,7 +152,9 @@ export async function POST(request: Request) {
             model.basicEvents || [],
             model.parameters || [],
             model.ccfGroups || [],
-            model.faultTrees || []
+            model.faultTrees || [],
+            model.quantificationSettings?.cutOff ?? 1e-15,
+            model.quantificationSettings?.maxCutsets ?? 3000
           );
         } else {
           const et = (model.eventTrees || []).find((e: any) => e.id === currentResult.targetId);

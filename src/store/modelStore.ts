@@ -1008,7 +1008,6 @@ export const useModelStore = create<ModelState>((set, get) => ({
   isDirty: false,
   past: [],
   future: [],
-
   setModel: (model) => {
     const updatedModel = { ...model };
     if (updatedModel.quantificationSettings) {
@@ -1018,16 +1017,27 @@ export const useModelStore = create<ModelState>((set, get) => ({
           cutOff: 1e-20
         };
       }
+      if (updatedModel.quantificationSettings.maxCutsets === undefined) {
+        updatedModel.quantificationSettings.maxCutsets = 3000;
+      }
     } else {
       updatedModel.quantificationSettings = {
         cutOff: 1e-20,
         approximation: 'bdd_exact',
         monteCarloSamples: 10000,
         useLHS: true,
-        runUncertainty: false
+        runUncertainty: false,
+        maxCutsets: 3000
       };
     }
-    set({ model: updatedModel, isDirty: false, past: [], future: [] });
+    set({ 
+      model: updatedModel, 
+      isDirty: false, 
+      past: [], 
+      future: [],
+      selectedFaultTreeId: updatedModel.faultTrees?.[0]?.id ?? null,
+      selectedEventTreeId: updatedModel.eventTrees?.[0]?.id ?? null
+    });
   },
 
   selectFaultTree: (id) => set({ selectedFaultTreeId: id }),

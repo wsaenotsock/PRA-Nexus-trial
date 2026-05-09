@@ -145,14 +145,16 @@ export default function Home() {
 
   // Auto-select first fault tree
   useEffect(() => {
-    if (!selectedFaultTreeId && model.faultTrees && model.faultTrees.length > 0) {
+    const hasSelectedFT = model.faultTrees?.some(ft => ft.id === selectedFaultTreeId);
+    if ((!selectedFaultTreeId || !hasSelectedFT) && model.faultTrees && model.faultTrees.length > 0) {
       selectFaultTree(model.faultTrees[0].id);
     }
   }, [model, selectedFaultTreeId, selectFaultTree]);
 
   // Auto-select first event tree
   useEffect(() => {
-    if (!selectedEventTreeId && model.eventTrees && model.eventTrees.length > 0) {
+    const hasSelectedET = model.eventTrees?.some(et => et.id === selectedEventTreeId);
+    if ((!selectedEventTreeId || !hasSelectedET) && model.eventTrees && model.eventTrees.length > 0) {
       selectEventTree(model.eventTrees[0].id);
     }
   }, [model, selectedEventTreeId, selectEventTree]);

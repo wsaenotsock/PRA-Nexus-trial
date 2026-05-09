@@ -550,7 +550,9 @@ export function quantifyFaultTree(
   originalBasicEvents: BasicEvent[],
   parameters: Parameter[] = [],
   ccfGroups: CCFGroup[] = [],
-  allFaultTrees: FaultTree[] = []
+  allFaultTrees: FaultTree[] = [],
+  cutoff: number = 1e-15,
+  maxCutsets: number = 3000
 ): QuantificationResult {
   const startTime = performance.now();
 
@@ -726,7 +728,7 @@ export function quantifyFaultTree(
   const topEventProbability = calculateProbability(bddRoot, probabilities);
 
   // Extract MCS
-  const rawCutSets = extractMCS(bddRoot, probabilities, [], [], 1.0, 1e-15, 3000);
+  const rawCutSets = extractMCS(bddRoot, probabilities, [], [], 1.0, cutoff, maxCutsets);
   const minimalCutSets = minimizeCutSets(rawCutSets);
 
   // Create CutSet objects with probabilities
