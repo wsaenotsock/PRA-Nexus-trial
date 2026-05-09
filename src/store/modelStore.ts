@@ -2066,11 +2066,12 @@ export const useModelStore = create<ModelState>((set, get) => ({
         // キャッシュされたモデルがデフォルトモデルであり、かつ「除熱FT」等が含まれていない古いバージョンの場合は、
         // キャッシュ（IndexedDB/localStorage）を最新のデフォルトモデルで上書きリセットする
         const defaultModel = createDefaultModel();
-        if (parsed.id === defaultModel.id) {
-          const parsedFTNames = parsed.faultTrees?.map((f: any) => f.name) || [];
-          const hasLatestFTs = parsedFTNames.includes('除熱FT') && parsedFTNames.includes('循環参照検証用1');
-          
-          if (!hasLatestFTs || !parsed.updatedAt || new Date(parsed.updatedAt) < new Date(defaultModel.updatedAt)) {
+        const parsedFTNames = parsed.faultTrees?.map((f: any) => f.name) || [];
+        const hasOldFTs = parsedFTNames.includes('New FT') || parsedFTNames.includes('New FT2');
+        const hasLatestFTs = parsedFTNames.includes('除熱FT') && parsedFTNames.includes('循環参照検証用1');
+        
+        if (parsed.id === defaultModel.id || hasOldFTs || !hasLatestFTs) {
+          if (hasOldFTs || !hasLatestFTs || !parsed.updatedAt || new Date(parsed.updatedAt) < new Date(defaultModel.updatedAt)) {
             parsed = defaultModel;
             await setIDBItem('pra-nexus-model', defaultModel);
             try {
