@@ -15,7 +15,7 @@ function createDefaultModel(): PRAModel {
     "version": 1,
     "locale": "ja",
     "createdAt": "2026-04-26T00:38:37.584Z",
-    "updatedAt": "2026-05-04T17:21:06.824Z",
+    "updatedAt": "2026-05-08T15:52:45.936Z",
     "faultTrees": [
       {
         "id": "cf187f39-aba2-4cc1-9674-1401731bd665",
@@ -28,7 +28,6 @@ function createDefaultModel(): PRAModel {
             "type": "OR",
             "children": [
               "2ae889ba-5914-4f1c-af43-e19353152f76",
-              "7124a152-7146-4655-a6a6-3f8ff5573f5f",
               "b5ae6c35-7f30-4e6c-a6f0-0dc8af519818"
             ],
             "position": {
@@ -84,7 +83,7 @@ function createDefaultModel(): PRAModel {
       },
       {
         "id": "c010528f-7713-4bbb-80bd-f460cb6b96b7",
-        "name": "New FT",
+        "name": "除熱FT",
         "topGateId": "43810738-79c1-4f8d-acf7-81e53042e86a",
         "gates": [
           {
@@ -112,14 +111,14 @@ function createDefaultModel(): PRAModel {
             ],
             "position": {
               "x": 160,
-              "y": 340
+              "y": 250
             }
           }
         ]
       },
       {
         "id": "cd1d3f6f-51a9-40fa-84d8-e0dc1a776ab5",
-        "name": "New FT",
+        "name": "循環参照検証用1",
         "topGateId": "d1eb74fd-c260-479f-a846-fe36b249c783",
         "gates": [
           {
@@ -127,7 +126,8 @@ function createDefaultModel(): PRAModel {
             "name": "TOP EVENT",
             "type": "OR",
             "children": [
-              "a8a5d4b4-4a3a-4e3b-a263-f272f1565bc1"
+              "a8a5d4b4-4a3a-4e3b-a263-f272f1565bc1",
+              "3b4fcc8a-e540-47a3-915d-1f65693344ff"
             ],
             "position": {
               "x": 400,
@@ -139,7 +139,7 @@ function createDefaultModel(): PRAModel {
       },
       {
         "id": "dc2948b2-b736-4ab0-9e24-bad9cffa9fec",
-        "name": "New FT2",
+        "name": "循環参照検証用2",
         "topGateId": "0e7bf2f9-178d-497f-8c1f-a19a85ffd041",
         "gates": [
           {
@@ -148,7 +148,8 @@ function createDefaultModel(): PRAModel {
             "type": "OR",
             "children": [
               "5dd2c600-63b2-46f7-85ad-4c521745c1a0",
-              "eba0865d-4596-4b22-a284-e6cc4cffe25d"
+              "eba0865d-4596-4b22-a284-e6cc4cffe25d",
+              "430968e5-4d9c-447d-8dcb-3341eef8dfc7"
             ],
             "position": {
               "x": 400,
@@ -185,20 +186,14 @@ function createDefaultModel(): PRAModel {
       {
         "id": "d0654510-8e04-4d58-a673-1e7cd95950c5",
         "name": "New ET",
-        "initiatingEventId": "898e9e47-586a-4132-ac5d-e88cdd2d7da9",
+        "initiatingEventId": "IE_1778255565935",
         "functionalEvents": [
           {
             "id": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a",
             "name": "注水機能",
             "branches": [
-              {
-                "id": "success",
-                "label": "Success"
-              },
-              {
-                "id": "failure",
-                "label": "Failure"
-              }
+              { "id": "success", "label": "Success" },
+              { "id": "failure", "label": "Failure" }
             ],
             "linkedFaultTreeId": "cf187f39-aba2-4cc1-9674-1401731bd665",
             "code": "ECCS1"
@@ -207,16 +202,8 @@ function createDefaultModel(): PRAModel {
             "id": "b3dce593-25e2-4239-8941-36654a6c96af",
             "name": "除熱機能",
             "branches": [
-              {
-                "id": "success",
-                "label": "Success",
-                "description": "成功"
-              },
-              {
-                "id": "failure",
-                "label": "Failure",
-                "description": "失敗"
-              }
+              { "id": "success", "label": "Success", "description": "成功" },
+              { "id": "failure", "label": "Failure", "description": "失敗" }
             ],
             "linkedFaultTreeId": "c010528f-7713-4bbb-80bd-f460cb6b96b7",
             "code": "ECCS2"
@@ -225,105 +212,120 @@ function createDefaultModel(): PRAModel {
             "id": "f7d340d7-fee3-4c18-a3aa-b246528d3fbb",
             "name": "Header13",
             "branches": [
-              {
-                "id": "success",
-                "label": "Success"
-              },
-              {
-                "id": "failure",
-                "label": "Failure"
-              }
+              { "id": "success", "label": "Success" },
+              { "id": "failure", "label": "Failure", "probability": 0.1 }
             ],
-            "code": "HEA"
+            "code": "HEA",
+            "linkedFaultTreeId": ""
           }
         ],
         "sequences": [
           {
             "id": "ee8de310-1738-449b-9dbd-372ff9e170bd",
             "path": [
-              {
-                "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a",
-                "branchId": "success"
-              },
-              {
-                "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af",
-                "branchId": "success"
-              }
+              { "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a", "branchId": "success" },
+              { "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af", "branchId": "success" }
             ],
             "endStateId": "16647e4a-e88e-4680-9379-824529ea06cf",
-            "name": "S-LOCA-01"
+            "name": "TEST-01"
           },
           {
             "id": "6a8482c5-bfae-49d1-a52d-6a0796f27003",
             "path": [
-              {
-                "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a",
-                "branchId": "success"
-              },
-              {
-                "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af",
-                "branchId": "failure"
-              }
+              { "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a", "branchId": "success" },
+              { "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af", "branchId": "failure" }
             ],
             "endStateId": "89df86f8-f1ef-4425-8cbf-e90c58182d45",
-            "name": "S-LOCA-02"
+            "name": "TEST-02"
           },
           {
             "id": "2f6b5331-b5e8-490f-bf46-956f0fdf3ee0",
             "path": [
-              {
-                "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a",
-                "branchId": "failure"
-              },
-              {
-                "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af",
-                "branchId": "success"
-              }
+              { "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a", "branchId": "failure" },
+              { "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af", "branchId": "success" }
             ],
             "endStateId": "16647e4a-e88e-4680-9379-824529ea06cf",
-            "name": "S-LOCA-03"
+            "name": "TEST-03"
           },
           {
             "id": "fd7666d9-8967-4a30-881b-a39ff6e47b42",
             "path": [
-              {
-                "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a",
-                "branchId": "failure"
-              },
-              {
-                "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af",
-                "branchId": "failure"
-              }
+              { "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a", "branchId": "failure" },
+              { "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af", "branchId": "failure" }
             ],
             "endStateId": "1b3d73da-bc82-4715-a610-54d83a8256c5",
-            "name": "S-LOCA-04"
+            "name": "TEST-04"
           }
         ]
       },
       {
         "id": "315210c7-324f-4a5c-93b5-ca6b04376d42",
-        "name": "ET2",
+        "name": "トランスファーET検証用2",
         "initiatingEventId": "898e9e47-586a-4132-ac5d-e88cdd2d7da9",
-        "functionalEvents": [],
+        "functionalEvents": [
+          {
+            "id": "846c1588-703f-4d77-bd11-86188eb062bd",
+            "name": "Header",
+            "branches": [
+              { "id": "success", "label": "成功" },
+              { "id": "failure", "label": "失敗" }
+            ],
+            "code": "HEA",
+            "linkedFaultTreeId": "cf187f39-aba2-4cc1-9674-1401731bd665"
+          }
+        ],
         "sequences": [
           {
-            "id": "3c07ff65-e4a2-400d-a175-fcde8f7f8759",
-            "path": [],
-            "endStateId": "16647e4a-e88e-4680-9379-824529ea06cf"
+            "id": "c595d301-212d-47a9-a3c2-36fe8fd45f8f",
+            "path": [
+              { "functionalEventId": "846c1588-703f-4d77-bd11-86188eb062bd", "branchId": "success" }
+            ],
+            "endStateId": "16647e4a-e88e-4680-9379-824529ea06cf",
+            "name": "TEST-01"
+          },
+          {
+            "id": "26a438a3-82dd-40f0-8461-487f4bd10582",
+            "path": [
+              { "functionalEventId": "846c1588-703f-4d77-bd11-86188eb062bd", "branchId": "failure" }
+            ],
+            "endStateId": "1b3d73da-bc82-4715-a610-54d83a8256c5",
+            "name": "TEST-02"
           }
         ]
       },
       {
         "id": "4705f10f-e6bc-47f6-97bb-4fbb95a8ceef",
-        "name": "New ETLevel2 ET",
+        "name": "トランスファーET検証用1",
         "initiatingEventId": "898e9e47-586a-4132-ac5d-e88cdd2d7da9",
-        "functionalEvents": [],
+        "functionalEvents": [
+          {
+            "id": "30b9d50b-a1a7-4dcd-82ae-ef02df115536",
+            "name": "Header",
+            "branches": [
+              { "id": "success", "label": "成功" },
+              { "id": "failure", "label": "失敗", "probability": 0.5 }
+            ],
+            "code": "HEA",
+            "linkedFaultTreeId": ""
+          }
+        ],
         "sequences": [
           {
-            "id": "8dc93e8b-3b0d-4edd-a852-e783da1031c6",
-            "path": [],
+            "id": "e8c2fb2f-ea3e-4220-8e12-4fc1dc3b6eb8",
+            "path": [
+              { "functionalEventId": "30b9d50b-a1a7-4dcd-82ae-ef02df115536", "branchId": "success" }
+            ],
             "endStateId": "16647e4a-e88e-4680-9379-824529ea06cf",
-            "transferETId": "d0654510-8e04-4d58-a673-1e7cd95950c5"
+            "name": "TEST-01"
+          },
+          {
+            "id": "d7578d94-49fd-4612-8b22-52f2c549a999",
+            "path": [
+              { "functionalEventId": "30b9d50b-a1a7-4dcd-82ae-ef02df115536", "branchId": "failure" }
+            ],
+            "endStateId": "182706df-5681-4721-8c8c-99911fa5b71b",
+            "name": "TEST-02",
+            "transferETId": "315210c7-324f-4a5c-93b5-ca6b04376d42"
           }
         ]
       }
@@ -331,45 +333,33 @@ function createDefaultModel(): PRAModel {
     "basicEvents": [
       {
         "id": "60dcf419-5457-41a6-8edd-6e974fa94a50",
-        "name": "MODIFIED-EVENT",
+        "name": "HPCIポンプ",
         "tags": ["ECCS", "ポンプ"],
         "failureRate": 0.001,
         "repairTime": 24,
-        "probability": 0.001,
+        "probability": 0.01,
         "missionTime": 24,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.00003,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.00003, "errorFactor": 3 },
         "source": "NUREG/CR-6928",
         "memo": "ECCSポンプ起動失敗",
         "parameterId": "79a2529c-dee4-4d7f-b402-5c9e3c17dea4",
         "failureType": "demand",
-        "position": {
-          "x": 460,
-          "y": 450
-        },
+        "position": { "x": 460, "y": 450 },
         "seismicFragilityId": "0a28cd4b-490a-41cb-8773-7426a5ac8122",
-        "demands": 10.005
+        "demands": 10,
+        "eventId": "test1"
       },
       {
         "id": "7f7ac691-a37f-4e1f-b20f-acaf0e1aa643",
         "name": "DG-FAIL-START",
         "tags": ["電源", "DG"],
         "failureRate": 0.03,
-        "probability": 0.03,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.03,
-          "errorFactor": 3
-        },
+        "probability": 0.72,
+        "distribution": { "type": "lognormal", "mean": 0.03, "errorFactor": 3 },
         "source": "NUREG/CR-6928",
         "memo": "ディーゼル発電機起動失敗",
-        "position": {
-          "x": -140,
-          "y": 650
-        }
+        "position": { "x": -140, "y": 650 },
+        "eventId": "DG-START-ID"
       },
       {
         "id": "aabe8e8e-c240-474a-ab84-cf195ba9fc75",
@@ -377,35 +367,25 @@ function createDefaultModel(): PRAModel {
         "tags": ["弁", "MOV"],
         "failureRate": 0.0005,
         "probability": 0.0005,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0005,
-          "errorFactor": 5
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0005, "errorFactor": 5 },
         "source": "NUREG/CR-6928",
         "memo": "電動弁開放失敗",
-        "position": {
-          "x": 1180,
-          "y": 450
-        }
+        "position": { "x": 1180, "y": 450 }
       },
       {
         "id": "4ce351c0-2ba8-47d9-98f7-bfffde1cc594",
-        "name": "HPI-TRAIN-FAIL",
+        "name": "HPCIポンプ_2",
         "tags": ["HPI", "注入"],
-        "failureRate": 0.0002,
-        "probability": 0.0002,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0002,
-          "errorFactor": 3
-        },
+        "failureRate": 0.0001,
+        "probability": 0.0024000000000000002,
+        "distribution": { "type": "beta", "mean": 0.0002, "errorFactor": 3 },
         "source": "NUREG/CR-6928",
         "memo": "高圧注入系トレイン故障",
-        "position": {
-          "x": 700,
-          "y": 450
-        }
+        "position": { "x": 700, "y": 450 },
+        "missionTime": 24,
+        "parameterId": "038628ae-6af9-41ee-945e-fedaf7776c86",
+        "failureType": "time",
+        "eventId": "test2"
       },
       {
         "id": "b4d69dce-c17a-4244-86cb-b1c90d5879e3",
@@ -413,17 +393,10 @@ function createDefaultModel(): PRAModel {
         "tags": ["LPI", "注入"],
         "failureRate": 0.01,
         "probability": 0.24,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "NUREG/CR-6928",
         "memo": "低圧注入系トレイン故障",
-        "position": {
-          "x": -260,
-          "y": 450
-        }
+        "position": { "x": -260, "y": 450 }
       },
       {
         "id": "51f5f79c-4d37-47b0-9390-21e30d42a614",
@@ -435,17 +408,10 @@ function createDefaultModel(): PRAModel {
         "probability": 0.0001,
         "missionTime": 24,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": 940,
-          "y": 450
-        },
+        "position": { "x": 940, "y": 450 },
         "seismicFragilityId": "0a28cd4b-490a-41cb-8773-7426a5ac8122"
       },
       {
@@ -458,17 +424,10 @@ function createDefaultModel(): PRAModel {
         "probability": 0.0001,
         "missionTime": 24,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": 100,
-          "y": 650
-        }
+        "position": { "x": 100, "y": 650 }
       },
       {
         "id": "a8a5d4b4-4a3a-4e3b-a263-f272f1565bc1",
@@ -480,17 +439,10 @@ function createDefaultModel(): PRAModel {
         "probability": 0.0001,
         "missionTime": 24,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": 400,
-          "y": 200
-        }
+        "position": { "x": 280, "y": 250 }
       },
       {
         "id": "8e6b8bfd-2904-4269-82fe-04de24131bc9",
@@ -502,17 +454,10 @@ function createDefaultModel(): PRAModel {
         "probability": 0.0001,
         "missionTime": 24,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": 1420,
-          "y": 450
-        }
+        "position": { "x": 1420, "y": 450 }
       },
       {
         "id": "face8671-66aa-4853-8e7b-87339ed448fd",
@@ -524,17 +469,10 @@ function createDefaultModel(): PRAModel {
         "probability": 0.0001,
         "missionTime": 24,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": 40,
-          "y": 560
-        },
+        "position": { "x": 40, "y": 450 },
         "seismicFragilityId": "d21dff14-2252-4a37-b98d-3fe5a5fd026b"
       },
       {
@@ -547,17 +485,10 @@ function createDefaultModel(): PRAModel {
         "probability": 0.0001,
         "missionTime": 24,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": 600,
-          "y": 580
-        },
+        "position": { "x": 280, "y": 450 },
         "seismicFragilityId": "0a28cd4b-490a-41cb-8773-7426a5ac8122"
       },
       {
@@ -570,17 +501,10 @@ function createDefaultModel(): PRAModel {
         "probability": 0.24,
         "missionTime": 24,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": 540,
-          "y": 200
-        }
+        "position": { "x": 160, "y": 250 }
       },
       {
         "id": "eba0865d-4596-4b22-a284-e6cc4cffe25d",
@@ -592,17 +516,10 @@ function createDefaultModel(): PRAModel {
         "probability": 0.24,
         "missionTime": 24,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": 220,
-          "y": 200
-        }
+        "position": { "x": 400, "y": 250 }
       },
       {
         "id": "e5d0da72-6467-4cbf-ae2b-a3023699dfd5",
@@ -614,17 +531,10 @@ function createDefaultModel(): PRAModel {
         "probability": 0.0001,
         "missionTime": 24,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": -80,
-          "y": 250
-        }
+        "position": { "x": -80, "y": 250 }
       },
       {
         "id": "813cd2f4-8a11-47d2-9196-8db7f680fe90",
@@ -636,17 +546,10 @@ function createDefaultModel(): PRAModel {
         "probability": 0.0001,
         "missionTime": 24,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": 160,
-          "y": 250
-        }
+        "position": { "x": 160, "y": 250 }
       },
       {
         "id": "8290b4d9-8ff4-40db-beae-118f074d48fe",
@@ -658,17 +561,10 @@ function createDefaultModel(): PRAModel {
         "probability": 0.0001,
         "missionTime": 24,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": 400,
-          "y": 250
-        }
+        "position": { "x": 400, "y": 250 }
       },
       {
         "id": "4c2f0a78-e286-4af1-9a05-3b1be4062244",
@@ -680,17 +576,10 @@ function createDefaultModel(): PRAModel {
         "probability": 0.0001,
         "missionTime": 24,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": 640,
-          "y": 250
-        }
+        "position": { "x": 640, "y": 250 }
       },
       {
         "id": "29c3116a-c495-4087-9ca0-5eb2bec667ab",
@@ -702,17 +591,10 @@ function createDefaultModel(): PRAModel {
         "probability": 0.0001,
         "missionTime": 24,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": 880,
-          "y": 250
-        }
+        "position": { "x": 880, "y": 250 }
       },
       {
         "id": "0f1fdfb9-8885-4b40-a621-7c4e27a8e118",
@@ -721,20 +603,14 @@ function createDefaultModel(): PRAModel {
         "tags": [],
         "failureType": "time",
         "failureRate": 0.0001,
-        "probability": 0.0001,
-        "missionTime": 24,
+        "probability": 0.0048000000000000004,
+        "missionTime": 48,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": 640,
-          "y": 340
-        }
+        "position": { "x": 400, "y": 250 },
+        "eventId": "TEST1"
       },
       {
         "id": "28b92623-8081-4c3a-a420-3835081bfcba",
@@ -742,21 +618,42 @@ function createDefaultModel(): PRAModel {
         "eventType": "basicEvent",
         "tags": [],
         "failureType": "time",
-        "failureRate": 0.0001,
-        "probability": 0.0001,
+        "failureRate": 0.00001,
+        "probability": 0.00024000000000000003,
         "missionTime": 24,
         "demands": 1,
-        "distribution": {
-          "type": "lognormal",
-          "mean": 0.0001,
-          "errorFactor": 3
-        },
+        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
         "source": "",
         "memo": "",
-        "position": {
-          "x": 940,
-          "y": 340
-        }
+        "position": { "x": 640, "y": 250 }
+      },
+      {
+        "id": "430968e5-4d9c-447d-8dcb-3341eef8dfc7",
+        "name": "トランスファ",
+        "eventType": "transferGate",
+        "tags": [],
+        "failureType": "time",
+        "failureRate": 0,
+        "probability": 0,
+        "distribution": { "type": "point", "mean": 0 },
+        "source": "",
+        "memo": "",
+        "position": { "x": 640, "y": 250 },
+        "linkedFaultTreeId": "cd1d3f6f-51a9-40fa-84d8-e0dc1a776ab5"
+      },
+      {
+        "id": "3b4fcc8a-e540-47a3-915d-1f65693344ff",
+        "name": "トランスファ_2",
+        "eventType": "transferGate",
+        "tags": [],
+        "failureType": "time",
+        "failureRate": 0,
+        "probability": 0,
+        "distribution": { "type": "point", "mean": 0 },
+        "source": "",
+        "memo": "",
+        "position": { "x": 520, "y": 250 },
+        "linkedFaultTreeId": "dc2948b2-b736-4ab0-9e24-bad9cffe9fec"
       }
     ],
     "houseEvents": [],
@@ -766,18 +663,35 @@ function createDefaultModel(): PRAModel {
         "name": "新規CCFグループ",
         "model": "beta_factor",
         "members": ["aabe8e8e-c240-474a-ab84-cf195ba9fc75"],
-        "parameters": {
-          "beta": 0.1
-        }
+        "parameters": { "beta": 0.1 }
+      },
+      {
+        "id": "03e92620-1640-46cb-93d0-4d5a9d605b50",
+        "name": "新規CCFグループ2",
+        "model": "beta_factor",
+        "members": [
+          "8290b4d9-8ff4-40db-beae-118f074d48fe",
+          "29c3116a-c495-4087-9ca0-5eb2bec667ab",
+          "60dcf419-5457-41a6-8edd-6e974fa94a50",
+          "4ce351c0-2ba8-47d9-98f7-bfffde1cc594"
+        ],
+        "parameters": { "beta": 0.1 }
       }
     ],
     "initiatingEvents": [
       {
         "id": "898e9e47-586a-4132-ac5d-e88cdd2d7da9",
-        "name": "LOCA-SMALL",
-        "frequency": 1.5,
+        "name": "TEST p=1",
+        "frequency": 1,
         "description": "小破断LOCA",
-        "code": "S-LOCA",
+        "code": "TEST",
+        "linkedFaultTreeId": ""
+      },
+      {
+        "id": "IE_1778255565935",
+        "name": "小LOCA",
+        "code": "SLOCA",
+        "frequency": 0.5,
         "linkedFaultTreeId": ""
       }
     ],
@@ -825,6 +739,12 @@ function createDefaultModel(): PRAModel {
         "name": "TW",
         "categories": ["core_damage", "大規模早期放出"],
         "color": "#FF4757"
+      },
+      {
+        "id": "182706df-5681-4721-8c8c-99911fa5b71b",
+        "name": "暫定",
+        "categories": ["core_damage"],
+        "color": "#FF4757"
       }
     ],
     "parameters": [
@@ -845,6 +765,7 @@ function createDefaultModel(): PRAModel {
         "description": ""
       }
     ],
+    "seismicHazardCurves": [],
     "seismicHazards": [
       {
         "id": "69b1ffb1-b462-45c0-ae0f-86e807bbfc01",
@@ -855,9 +776,9 @@ function createDefaultModel(): PRAModel {
             "name": "Mean",
             "percentile": -1,
             "points": [
-              {"pga": 0.1, "frequency": 0.001},
-              {"pga": 0.5, "frequency": 0.0001},
-              {"pga": 1, "frequency": 0.00001}
+              { "pga": 0.1, "frequency": 0.001 },
+              { "pga": 0.5, "frequency": 0.0001 },
+              { "pga": 1, "frequency": 0.00001 }
             ]
           },
           {
@@ -865,9 +786,9 @@ function createDefaultModel(): PRAModel {
             "name": "50%",
             "percentile": 0.5,
             "points": [
-              {"pga": 0.1, "frequency": 0.001},
-              {"pga": 0.5, "frequency": 0.0001},
-              {"pga": 1, "frequency": 0.00001}
+              { "pga": 0.1, "frequency": 0.001 },
+              { "pga": 0.5, "frequency": 0.0001 },
+              { "pga": 1, "frequency": 0.00001 }
             ]
           },
           {
@@ -875,9 +796,9 @@ function createDefaultModel(): PRAModel {
             "name": "95%",
             "percentile": 0.95,
             "points": [
-              {"pga": 0.1, "frequency": 0.005},
-              {"pga": 0.5, "frequency": 0.0005},
-              {"pga": 1, "frequency": 0.00005}
+              { "pga": 0.1, "frequency": 0.005 },
+              { "pga": 0.5, "frequency": 0.0005 },
+              { "pga": 1, "frequency": 0.00005 }
             ]
           }
         ]
@@ -891,12 +812,12 @@ function createDefaultModel(): PRAModel {
             "name": "Mean",
             "percentile": -1,
             "points": [
-              {"pga": 0, "frequency": 1},
-              {"pga": 0.1, "frequency": 0.1},
-              {"pga": 0.5, "frequency": 0.01},
-              {"pga": 1, "frequency": 0.001},
-              {"pga": 1.5, "frequency": 0.0001},
-              {"pga": 2, "frequency": 0.00001}
+              { "pga": 0, "frequency": 1 },
+              { "pga": 0.1, "frequency": 0.1 },
+              { "pga": 0.5, "frequency": 0.01 },
+              { "pga": 1, "frequency": 0.001 },
+              { "pga": 1.5, "frequency": 0.0001 },
+              { "pga": 2, "frequency": 0.00001 }
             ]
           },
           {
@@ -904,12 +825,12 @@ function createDefaultModel(): PRAModel {
             "name": "5%",
             "percentile": 0.5,
             "points": [
-              {"pga": 0, "frequency": 1},
-              {"pga": 0.1, "frequency": 0.1},
-              {"pga": 0.5, "frequency": 0.01},
-              {"pga": 1, "frequency": 0.001},
-              {"pga": 1.5, "frequency": 0.0001},
-              {"pga": 2, "frequency": 0.00001}
+              { "pga": 0, "frequency": 1 },
+              { "pga": 0.1, "frequency": 0.1 },
+              { "pga": 0.5, "frequency": 0.01 },
+              { "pga": 1, "frequency": 0.001 },
+              { "pga": 1.5, "frequency": 0.0001 },
+              { "pga": 2, "frequency": 0.00001 }
             ]
           },
           {
@@ -917,12 +838,12 @@ function createDefaultModel(): PRAModel {
             "name": "50%",
             "percentile": 0.5,
             "points": [
-              {"pga": 0, "frequency": 1},
-              {"pga": 0.1, "frequency": 0.1},
-              {"pga": 0.5, "frequency": 0.01},
-              {"pga": 1, "frequency": 0.001},
-              {"pga": 1.5, "frequency": 0.0001},
-              {"pga": 2, "frequency": 0.00001}
+              { "pga": 0, "frequency": 1 },
+              { "pga": 0.1, "frequency": 0.1 },
+              { "pga": 0.5, "frequency": 0.01 },
+              { "pga": 1, "frequency": 0.001 },
+              { "pga": 1.5, "frequency": 0.0001 },
+              { "pga": 2, "frequency": 0.00001 }
             ]
           },
           {
@@ -930,12 +851,12 @@ function createDefaultModel(): PRAModel {
             "name": "95%",
             "percentile": 0.5,
             "points": [
-              {"pga": 0, "frequency": 1},
-              {"pga": 0.1, "frequency": 0.1},
-              {"pga": 0.5, "frequency": 0.01},
-              {"pga": 1, "frequency": 0.001},
-              {"pga": 1.5, "frequency": 0.0001},
-              {"pga": 2, "frequency": 0.00001}
+              { "pga": 0, "frequency": 1 },
+              { "pga": 0.1, "frequency": 0.1 },
+              { "pga": 0.5, "frequency": 0.01 },
+              { "pga": 1, "frequency": 0.001 },
+              { "pga": 1.5, "frequency": 0.0001 },
+              { "pga": 2, "frequency": 0.00001 }
             ]
           }
         ]
@@ -949,9 +870,9 @@ function createDefaultModel(): PRAModel {
             "name": "Mean",
             "percentile": -1,
             "points": [
-              {"pga": 0.1, "frequency": 0.001},
-              {"pga": 0.5, "frequency": 0.0001},
-              {"pga": 1, "frequency": 0.00001}
+              { "pga": 0.1, "frequency": 0.001 },
+              { "pga": 0.5, "frequency": 0.0001 },
+              { "pga": 1, "frequency": 0.00001 }
             ]
           }
         ]
@@ -966,9 +887,9 @@ function createDefaultModel(): PRAModel {
         "betaU": 0.2,
         "type": "lognormal",
         "points": [
-          {"pga": 0.1, "probability": 0.1},
-          {"pga": 0.5, "probability": 0.5},
-          {"pga": 1, "probability": 0.9}
+          { "pga": 0.1, "probability": 0.1 },
+          { "pga": 0.5, "probability": 0.5 },
+          { "pga": 1, "probability": 0.9 }
         ]
       },
       {
@@ -988,10 +909,10 @@ function createDefaultModel(): PRAModel {
         "betaR": 0.2,
         "betaU": 0.2,
         "points": [
-          {"pga": 0, "probability": 0},
-          {"pga": 1, "probability": 0.01},
-          {"pga": 1.001, "probability": 1},
-          {"pga": 2, "probability": 1}
+          { "pga": 0, "probability": 0 },
+          { "pga": 1, "probability": 0.01 },
+          { "pga": 1.001, "probability": 1 },
+          { "pga": 2, "probability": 1 }
         ]
       }
     ],
@@ -1011,7 +932,7 @@ function createDefaultModel(): PRAModel {
       "approximation": "bdd_exact",
       "monteCarloSamples": 10000,
       "useLHS": true,
-      "runUncertainty": false
+      "runUncertainty": true
     }
   };
 }
