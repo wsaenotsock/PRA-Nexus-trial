@@ -943,6 +943,7 @@ function createDefaultModel(): PRAModel {
     {
       "id": "16647e4a-e88e-4680-9379-824529ea06cf",
       "name": "OK",
+      "category": "success",
       "description": "正常",
       "color": "#00D68F",
       "categories": [
@@ -952,6 +953,7 @@ function createDefaultModel(): PRAModel {
     {
       "id": "1b3d73da-bc82-4715-a610-54d83a8256c5",
       "name": "TQUX",
+      "category": "core_damage",
       "description": "過渡事象+給水喪失+高圧注入失敗+減圧失敗",
       "color": "#FF4757",
       "categories": [
@@ -961,6 +963,7 @@ function createDefaultModel(): PRAModel {
     {
       "id": "89df86f8-f1ef-4425-8cbf-e90c58182d45",
       "name": "TQUV",
+      "category": "core_damage",
       "description": "過渡事象+給水喪失+高圧注入成功+格納容器冷却失敗",
       "color": "#FF6B81",
       "categories": [
@@ -970,6 +973,7 @@ function createDefaultModel(): PRAModel {
     {
       "id": "4eca73ec-1c3f-4782-9432-099981b92367",
       "name": "SBO-CD",
+      "category": "core_damage",
       "description": "全電源喪失→炉心損傷",
       "color": "#FFA502",
       "categories": [
@@ -1317,8 +1321,7 @@ function createDefaultModel(): PRAModel {
     "approximation": "bdd_exact",
     "monteCarloSamples": 10000,
     "useLHS": true,
-    "runUncertainty": true,
-    "maxCutsets": 1000
+    "runUncertainty": true
   }
 };
 }
