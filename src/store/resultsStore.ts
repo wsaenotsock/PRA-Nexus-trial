@@ -74,7 +74,10 @@ export async function runWorkerCommand<T>(type: string, payload: any): Promise<T
         fullPayload.currentResult = useResultsStore.getState().results[activeResultId];
       }
 
-      const response = await fetch('/api/quantify', {
+      const endpoint = process.env.NEXT_PUBLIC_COMPUTE_ENDPOINT || '/api/quantify';
+      console.log(`[Compute] Sending task to endpoint: ${endpoint}`);
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, payload: fullPayload }),
