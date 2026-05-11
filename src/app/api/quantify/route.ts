@@ -39,6 +39,12 @@ export async function POST(request: Request) {
   try {
     const { type, payload } = await request.json();
 
+    const getSingularApproxMethod = (model: any) => {
+      const setting = model?.quantificationSettings?.approximation;
+      if (Array.isArray(setting)) return setting[0] || 'bdd_exact';
+      return setting || 'bdd_exact';
+    };
+
     if (!type) {
       return addCorsHeaders(NextResponse.json({ error: 'Missing calculation type' }, { status: 400 }));
     }
@@ -53,7 +59,8 @@ export async function POST(request: Request) {
         if (!ft) throw new Error(`Fault Tree not found: ${targetId}`);
 
         const cutoffValue = model.quantificationSettings?.cutOff ?? 1e-15;
-        const maxCutsetsValue = model.quantificationSettings?.maxCutsets ?? 3000;
+        const maxCutsetsValue = model.quantificationSettings?.maxCutsets ?? 100000;
+        const approxMethod = getSingularApproxMethod(model);
         const res = quantifyFaultTree(
           ft,
           model.basicEvents || [],
@@ -61,7 +68,8 @@ export async function POST(request: Request) {
           model.ccfGroups || [],
           model.faultTrees || [],
           cutoffValue,
-          maxCutsetsValue
+          maxCutsetsValue,
+          approxMethod
         );
         res.cutoff = cutoffValue;
         const finalRes = { ...res, isFaultTree: true, targetId } as any;
@@ -74,7 +82,8 @@ export async function POST(request: Request) {
         const et = (model.eventTrees || []).find((e: any) => e.id === targetId);
         if (!et) throw new Error(`Event Tree not found: ${targetId}`);
 
-        const res = quantifyEventTree(et, model);
+        const approxMethod = getSingularApproxMethod(model);
+        const res = quantifyEventTree(et, model, approxMethod);
         res.cutoff = model.quantificationSettings?.cutOff;
         const finalRes = { ...res, isFaultTree: false, targetId } as any;
         return addCorsHeaders(NextResponse.json({ result: cleanResult(finalRes) }));
@@ -108,11 +117,12 @@ export async function POST(request: Request) {
             model.ccfGroups || [],
             model.faultTrees || [],
             model.quantificationSettings?.cutOff ?? 1e-15,
-            model.quantificationSettings?.maxCutsets ?? 3000
+            model.quantificationSettings?.maxCutsets ?? 100000,
+            getSingularApproxMethod(model)
           );
         } else {
           const et = (model.eventTrees || []).find((e: any) => e.id === currentResult.targetId);
-          fullResult = quantifyEventTree(et, model);
+          fullResult = quantifyEventTree(et, model, getSingularApproxMethod(model));
         }
 
         if (targetType === 'total') {
@@ -174,11 +184,12 @@ export async function POST(request: Request) {
             model.ccfGroups || [],
             model.faultTrees || [],
             model.quantificationSettings?.cutOff ?? 1e-15,
-            model.quantificationSettings?.maxCutsets ?? 3000
+            model.quantificationSettings?.maxCutsets ?? 100000,
+            getSingularApproxMethod(model)
           );
         } else {
           const et = (model.eventTrees || []).find((e: any) => e.id === currentResult.targetId);
-          fullResult = quantifyEventTree(et, model);
+          fullResult = quantifyEventTree(et, model, getSingularApproxMethod(model));
         }
 
         if (!fullResult.totalRiskBDD || !fullResult.baseProbabilities) {

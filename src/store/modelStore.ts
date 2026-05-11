@@ -1407,7 +1407,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
         };
       }
       if (updatedModel.quantificationSettings.maxCutsets === undefined) {
-        updatedModel.quantificationSettings.maxCutsets = 3000;
+        updatedModel.quantificationSettings.maxCutsets = 100000;
       }
     } else {
       updatedModel.quantificationSettings = {
@@ -1416,7 +1416,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
         monteCarloSamples: 10000,
         useLHS: true,
         runUncertainty: false,
-        maxCutsets: 3000
+        maxCutsets: 100000
       };
     }
     set({ 

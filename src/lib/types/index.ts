@@ -193,7 +193,7 @@ export interface SeismicSettings {
 
 export interface GlobalQuantificationSettings {
   cutOff: number;
-  approximation: 'bdd_exact' | 'rare_event' | 'mcupb';
+  approximation: ('bdd_exact' | 'rare_event' | 'mcub')[];
   monteCarloSamples: number;
   useLHS: boolean;
   runUncertainty: boolean;
@@ -293,7 +293,7 @@ export interface QuantificationResult {
   sequenceResults?: SequenceResult[];
   seismicResult?: SeismicResult;
   computeTimeMs: number;
-  method: 'bdd_exact' | 'rare_event' | 'seismic_integration' | 'analytical_approx';
+  method: 'bdd_exact' | 'rare_event' | 'mcub' | 'seismic_integration' | 'analytical_approx';
   baseProbabilities?: Record<string, number>; // Added for sensitivity analysis
   uncertainty?: any; // Monte Carlo result
   cutoff?: number;

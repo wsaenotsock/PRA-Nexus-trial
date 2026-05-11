@@ -23,7 +23,11 @@ self.onmessage = async (e: MessageEvent) => {
         if (!ft) throw new Error(`Fault Tree not found: ${targetId}`);
         
         const cutoffValue = model.quantificationSettings?.cutOff ?? 1e-15;
-        const maxCutsetsValue = model.quantificationSettings?.maxCutsets ?? 3000;
+        const maxCutsetsValue = model.quantificationSettings?.maxCutsets ?? 100000;
+        const approxSetting = model.quantificationSettings?.approximation;
+        const approxMethod = Array.isArray(approxSetting) 
+          ? (approxSetting[0] || 'bdd_exact') 
+          : (approxSetting ?? 'bdd_exact');
         const res = quantifyFaultTree(
           ft,
           model.basicEvents || [],
@@ -31,7 +35,8 @@ self.onmessage = async (e: MessageEvent) => {
           model.ccfGroups || [],
           model.faultTrees || [],
           cutoffValue,
-          maxCutsetsValue
+          maxCutsetsValue,
+          approxMethod
         );
         res.cutoff = cutoffValue;
         currentResult = res;
@@ -45,7 +50,11 @@ self.onmessage = async (e: MessageEvent) => {
         const et = (model.eventTrees || []).find((e: any) => e.id === targetId);
         if (!et) throw new Error(`Event Tree not found: ${targetId}`);
         
-        const res = quantifyEventTree(et, model);
+        const approxSetting = model.quantificationSettings?.approximation;
+        const approxMethod = Array.isArray(approxSetting) 
+          ? (approxSetting[0] || 'bdd_exact') 
+          : (approxSetting ?? 'bdd_exact');
+        const res = quantifyEventTree(et, model, approxMethod as any);
         res.cutoff = model.quantificationSettings?.cutOff;
         currentResult = res;
         self.postMessage({ id, type: 'SUCCESS', result: cleanResult(res) });

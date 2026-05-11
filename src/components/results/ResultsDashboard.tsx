@@ -6,6 +6,7 @@ import { useModelStore } from '@/store/modelStore';
 import UncertaintyPanel from './UncertaintyPanel';
 import SensitivityPanel from './SensitivityPanel';
 import { downloadFile, jsonToCsv } from '@/lib/utils/export';
+import { formatDuration } from '@/lib/utils/format';
 
 interface ResultsDashboardProps {
   locale?: 'ja' | 'en';
@@ -21,7 +22,8 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
   const model = useModelStore((s) => s.model);
   const [activeTab, setActiveTab] = useState<'cutsets' | 'importance' | 'endstates' | 'sequences' | 'uncertainty' | 'sensitivity'>('cutsets');
   const [importanceTab, setImportanceTab] = useState<ImportanceTab>('fv');
-  const [maxCutsets, setMaxCutsets] = useState(50);
+  const [pageSize, setPageSize] = useState(50);
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedSeqId, setSelectedSeqId] = useState<string | null>(null);
 
   const t = useMemo(() => ({
@@ -29,6 +31,7 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
     topEvent: locale === 'ja' ? 'トップイベント確率 / 非成功頻度合計' : 'Top Event Prob / Total Non-Success',
     bddExact: locale === 'ja' ? 'BDD精密値' : 'BDD Exact',
     rareEvent: locale === 'ja' ? 'Rare Event近似' : 'Rare Event Approx',
+    mcub: locale === 'ja' ? 'MCUB近似' : 'MCUB Approx',
     computeTime: locale === 'ja' ? '計算時間' : 'Compute Time',
     cutsets: locale === 'ja' ? 'カットセット' : 'Cut Sets',
     importance: locale === 'ja' ? '重要度指標' : 'Importance',
@@ -87,10 +90,22 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
     );
   }, [sortedImportance, importanceTab]);
 
-  const displayedCutsets = useMemo(() => {
+  const allCutsets = useMemo(() => {
     const source = selectedSeq ? selectedSeq.cutSets : result?.cutSets;
-    return (source || []).slice(0, maxCutsets);
-  }, [selectedSeq, result, maxCutsets]);
+    return source || [];
+  }, [selectedSeq, result]);
+
+  const totalPages = Math.max(1, Math.ceil(allCutsets.length / pageSize));
+
+  const displayedCutsets = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return allCutsets.slice(start, start + pageSize);
+  }, [allCutsets, currentPage, pageSize]);
+
+  // Reset to page 1 when active content or page size changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedSeqId, result, activeTab, pageSize]);
 
   if (isComputing) {
     return (
@@ -177,6 +192,47 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
     }
     return 0;
   };
+  const selectedMethods: string[] = React.useMemo(() => {
+    const raw = model.quantificationSettings?.approximation;
+    const arr = Array.isArray(raw) ? [...raw] : (raw ? [raw] : ['bdd_exact']);
+    const finalArr = arr.length > 0 ? arr : ['bdd_exact']; // fallback
+    
+    // Enforce explicit display order: BDD -> MCUB -> Rare Event
+    const order: Record<string, number> = { 'bdd_exact': 0, 'mcub': 1, 'rare_event': 2 };
+    return finalArr.sort((a, b) => (order[a] ?? 99) - (order[b] ?? 99));
+  }, [model.quantificationSettings?.approximation]);
+
+  const computedValues = React.useMemo(() => {
+    if (!result.cutSets) return { bdd_exact: result.topEventProbability, rare_event: 0, mcub: 0 };
+    
+    // Rare Event
+    let sum = 0;
+    for (const cs of result.cutSets) sum += cs.probability;
+    const rareVal = Math.min(sum, 1);
+
+    // MCUB
+    let prod = 1;
+    for (const cs of result.cutSets) prod *= (1 - Math.min(cs.probability, 1));
+    const mcubVal = 1 - prod;
+
+    return {
+      bdd_exact: result.topEventProbability,
+      rare_event: rareVal,
+      mcub: mcubVal
+    };
+  }, [result.cutSets, result.topEventProbability]);
+
+  const getMethodLabel = (m: string) => {
+    switch(m) {
+      case 'bdd_exact': return t.bddExact;
+      case 'rare_event': return t.rareEvent;
+      case 'mcub': return t.mcub;
+      default: return m;
+    }
+  };
+
+  const primaryMethod = selectedMethods[0];
+  const secondaryMethods = selectedMethods.slice(1);
 
   return (
     <div className="animate-fadeIn" style={{
@@ -188,11 +244,17 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
         padding: 'var(--space-md)', flexShrink: 0
       }}>
         <div className="stat-card">
-          <div className="stat-card__label">{t.bddExact}</div>
-          <div className="stat-card__value">{result.topEventProbability.toExponential(3)}</div>
-          <div className="stat-card__sub">
-            {t.rareEvent}: {result.topEventProbabilityApprox.toExponential(3)}
-          </div>
+          <div className="stat-card__label">{getMethodLabel(primaryMethod)}</div>
+          <div className="stat-card__value">{(computedValues as any)[primaryMethod]?.toExponential(3)}</div>
+          {secondaryMethods.length > 0 && (
+            <div className="stat-card__sub" style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '4px', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              {secondaryMethods.map(m => (
+                <div key={m} style={{ fontSize: '11px' }}>
+                  {getMethodLabel(m)}: {(computedValues as any)[m]?.toExponential(3)}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <div className="stat-card">
           <div className="stat-card__label">{t.totalMCS}</div>
@@ -205,10 +267,10 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
         </div>
         <div className="stat-card">
           <div className="stat-card__label">{t.computeTime}</div>
-          <div className="stat-card__value" style={{ color: 'var(--accent-cyan)' }}>
-            {result.computeTimeMs.toFixed(1)}
+          <div className="stat-card__value" style={{ color: 'var(--accent-cyan)', fontSize: result.computeTimeMs >= 60000 ? '18px' : '22px' }}>
+            {formatDuration(result.computeTimeMs)}
           </div>
-          <div className="stat-card__sub">ms</div>
+          <div className="stat-card__sub">{locale === 'ja' ? '計算処理時間' : 'Execution Time'}</div>
         </div>
         <div className="stat-card">
           <div className="stat-card__label">{locale === 'ja' ? '解析手法 / カットオフ' : 'Method / Cut-off'}</div>
@@ -302,18 +364,19 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  {locale === 'ja' ? '表示件数:' : 'Show:'}
+                  {locale === 'ja' ? 'ページ表示件数:' : 'Items per Page:'}
                 </span>
                 <select
                   className="form-select"
-                  value={maxCutsets}
-                  onChange={(e) => setMaxCutsets(Number(e.target.value))}
+                  value={pageSize}
+                  onChange={(e) => setPageSize(Number(e.target.value))}
                   style={{ width: '80px', padding: '2px 8px', fontSize: '12px' }}
                 >
                   <option value={10}>10</option>
                   <option value={50}>50</option>
                   <option value={100}>100</option>
                   <option value={500}>500</option>
+                  <option value={1000}>1000</option>
                 </select>
               </div>
             </div>
@@ -329,9 +392,11 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
                 </tr>
               </thead>
               <tbody>
-                {displayedCutsets.map((cs, i) => (
-                  <tr key={i}>
-                    <td style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>#{i + 1}</td>
+                {displayedCutsets.map((cs, i) => {
+                  const globalIndex = (currentPage - 1) * pageSize + i;
+                  return (
+                    <tr key={i}>
+                      <td style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>#{globalIndex + 1}</td>
                     <td>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                         {cs.events.map((eid, j) => (
@@ -351,10 +416,77 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
                     <td style={{ textAlign: 'right', fontWeight: 600, color: 'var(--accent-amber)' }}>
                       {((cs.probability / result.topEventProbability) * 100).toFixed(2)}%
                     </td>
-                  </tr>
-                ))}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: '16px',
+                marginTop: '16px',
+                padding: '12px',
+                background: 'var(--bg-secondary)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-default)'
+              }}>
+                <button
+                  className="btn btn--secondary btn--sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage(1)}
+                  title={locale === 'ja' ? '最初へ' : 'First'}
+                >
+                  «
+                </button>
+                <button
+                  className="btn btn--secondary btn--sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                >
+                  ‹ {locale === 'ja' ? '前へ' : 'Prev'}
+                </button>
+                
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  padding: '0 16px' 
+                }}>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {currentPage}
+                  </span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>/</span>
+                  <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    {totalPages}
+                  </span>
+                </div>
+
+                <button
+                  className="btn btn--secondary btn--sm"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                >
+                  {locale === 'ja' ? '次へ' : 'Next'} ›
+                </button>
+                <button
+                  className="btn btn--secondary btn--sm"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage(totalPages)}
+                  title={locale === 'ja' ? '最後へ' : 'Last'}
+                >
+                  »
+                </button>
+                
+                <div style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                  {locale === 'ja' ? '総件数: ' : 'Total: '}{allCutsets.length.toLocaleString()}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

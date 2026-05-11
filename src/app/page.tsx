@@ -142,6 +142,7 @@ export default function Home() {
   const setResult = useResultsStore((s) => s.setResult);
   const setComputing = useResultsStore((s) => s.setComputing);
   const setError = useResultsStore((s) => s.setError);
+  const isComputing = useResultsStore((s) => s.isComputing);
 
   // Auto-select first fault tree
   useEffect(() => {
@@ -543,6 +544,12 @@ export default function Home() {
           <span className="app-header__subtitle">
             {locale === 'ja' ? '静的PRA解析' : 'Static PRA Analysis'}
           </span>
+          {isComputing && (
+            <div className="computing-indicator">
+              <div className="spinner-dot" />
+              {locale === 'ja' ? '計算中...' : 'Calculating...'}
+            </div>
+          )}
         </div>
 
         <div className="app-header__actions">
