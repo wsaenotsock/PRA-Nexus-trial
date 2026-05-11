@@ -197,6 +197,7 @@ export interface GlobalQuantificationSettings {
   monteCarloSamples: number;
   useLHS: boolean;
   runUncertainty: boolean;
+  maxCutsets: number;
 }
 
 // ===== PRA Model (Top Level) =====

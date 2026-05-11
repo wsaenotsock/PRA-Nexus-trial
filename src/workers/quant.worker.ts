@@ -22,8 +22,18 @@ self.onmessage = async (e: MessageEvent) => {
         const ft = (model.faultTrees || []).find((f: any) => f.id === targetId);
         if (!ft) throw new Error(`Fault Tree not found: ${targetId}`);
         
-        const res = quantifyFaultTree(ft, model.basicEvents || [], model.parameters || [], model.ccfGroups || [], model.faultTrees || []);
-        res.cutoff = model.quantificationSettings?.cutOff;
+        const cutoffValue = model.quantificationSettings?.cutOff ?? 1e-15;
+        const maxCutsetsValue = model.quantificationSettings?.maxCutsets ?? 3000;
+        const res = quantifyFaultTree(
+          ft,
+          model.basicEvents || [],
+          model.parameters || [],
+          model.ccfGroups || [],
+          model.faultTrees || [],
+          cutoffValue,
+          maxCutsetsValue
+        );
+        res.cutoff = cutoffValue;
         currentResult = res;
         self.postMessage({ id, type: 'SUCCESS', result: cleanResult(res) });
         break;

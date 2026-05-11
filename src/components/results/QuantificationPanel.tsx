@@ -17,9 +17,16 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
     approximation: 'bdd_exact',
     monteCarloSamples: 10000,
     useLHS: true,
-    runUncertainty: false
+    runUncertainty: false,
+    maxCutsets: 3000
   };
   const updateSettings = useModelStore(s => s.updateQuantificationSettings);
+  
+  const [cutOffInput, setCutOffInput] = React.useState(settings.cutOff.toString());
+
+  React.useEffect(() => {
+    setCutOffInput(settings.cutOff.toExponential());
+  }, [settings.cutOff]);
   
   const results = useResultsStore(s => s.results || {});
   const activeResultId = useResultsStore(s => s.activeResultId);
@@ -86,6 +93,10 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
     title: locale === 'ja' ? '定量化設定' : 'Quantification Settings',
     cutOff: locale === 'ja' ? 'カットオフ値 (下限確率)' : 'Cut-off Threshold',
     approximation: locale === 'ja' ? '計算手法' : 'Calculation Method',
+    maxCutsets: locale === 'ja' ? '最大カットセット数 (打ち切り値)' : 'Max Cutsets Limit',
+    cutoffTip: locale === 'ja' 
+      ? '💡 ヒント: カットオフ値を下げすぎると（例: 1e-40）、極小確率のカットセットだけで打ち切り上限に達してしまい、本来の支配的なカットセットが計算されなくなって近似値が急激に小さくなる現象が発生します。基本事象の確率スケールに合わせた適切な値（例: 1e-15〜1e-20）を設定してください。' 
+      : '💡 Tip: Setting the cut-off threshold too low (e.g., 1e-40) can cause the truncation limit to be filled entirely with negligible cutsets, preventing dominant cutsets from being calculated and artificially decreasing the approximation value. Choose a threshold appropriate to your events (e.g., 1e-15 to 1e-20).',
     mcSamples: locale === 'ja' ? 'モンテカルロ試行回数' : 'Monte Carlo Samples',
     useLHS: locale === 'ja' ? 'LHS (Latin Hypercube Sampling) を使用' : 'Use Latin Hypercube Sampling (LHS)',
     runFT: locale === 'ja' ? 'FT定量化実行' : 'Run FT Quantification',
@@ -196,10 +207,26 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
           <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>📊</span> {locale === 'ja' ? '基本設定' : 'Basic Settings'}
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
             <div className="form-group">
               <label className="form-label">{t.cutOff}</label>
-              <input type="number" className="form-input" value={settings.cutOff} onChange={(e) => handleChange('cutOff', parseFloat(e.target.value))} step="1e-12" />
+              <input 
+                type="text" 
+                className="form-input" 
+                value={cutOffInput} 
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCutOffInput(val);
+                  const parsed = parseFloat(val);
+                  if (!isNaN(parsed) && parsed >= 0) {
+                    handleChange('cutOff', parsed);
+                  }
+                }}
+                onBlur={() => {
+                  setCutOffInput(settings.cutOff.toExponential());
+                }}
+                placeholder="例: 1e-15"
+              />
             </div>
             <div className="form-group">
               <label className="form-label">{t.approximation}</label>
@@ -209,6 +236,34 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
                 <option value="mcupb">{locale === 'ja' ? 'MCUPB (Min Cut Upper Bound)' : 'MCUPB'}</option>
               </select>
             </div>
+            <div className="form-group">
+              <label className="form-label">{t.maxCutsets}</label>
+              <input 
+                type="number" 
+                className="form-input" 
+                value={settings.maxCutsets ?? 3000} 
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val) && val > 0) {
+                    handleChange('maxCutsets', val);
+                  }
+                }}
+                min={1}
+                placeholder="例: 3000"
+              />
+            </div>
+          </div>
+          <div style={{ 
+            marginTop: '16px', 
+            padding: '12px 16px', 
+            background: 'rgba(59, 130, 246, 0.08)', 
+            border: '1px solid rgba(59, 130, 246, 0.2)', 
+            borderRadius: '8px', 
+            fontSize: '12px', 
+            lineHeight: '1.6', 
+            color: 'var(--text-secondary)' 
+          }}>
+            {t.cutoffTip}
           </div>
         </section>
 

@@ -9,932 +9,1321 @@ import type { PRAModel, BasicEvent, HouseEvent, Gate, FaultTree, EndState, Param
 // ===== Default Sample Model =====
 function createDefaultModel(): PRAModel {
   return {
-    "id": "e870c452-77b5-40f4-a969-eabd2b99ee08",
-    "name": "サンプルPRAモデル",
-    "description": "ECCS注入失敗を対象としたサンプルFault Tree",
-    "version": 1,
-    "locale": "ja",
-    "createdAt": "2026-04-26T00:38:37.584Z",
-    "updatedAt": "2026-05-08T15:52:45.936Z",
-    "faultTrees": [
-      {
-        "id": "cf187f39-aba2-4cc1-9674-1401731bd665",
-        "name": "ECCS注入失敗 FT",
-        "topGateId": "3ded9df2-2df8-44be-8f8e-ffa7745f8213",
-        "gates": [
-          {
-            "id": "3ded9df2-2df8-44be-8f8e-ffa7745f8213",
-            "name": "ECCS注入失敗",
-            "type": "OR",
-            "children": [
-              "2ae889ba-5914-4f1c-af43-e19353152f76",
-              "b5ae6c35-7f30-4e6c-a6f0-0dc8af519818"
-            ],
-            "position": {
-              "x": 400,
-              "y": 50
-            }
-          },
-          {
-            "id": "2ae889ba-5914-4f1c-af43-e19353152f76",
-            "name": "電源喪失",
-            "type": "OR",
-            "children": [
-              "b4d69dce-c17a-4244-86cb-b1c90d5879e3",
-              "98733dd7-4bc0-4ae6-805f-799c51919cff"
-            ],
-            "position": {
-              "x": -140,
-              "y": 250
-            },
-            "collapsed": false
-          },
-          {
-            "id": "98733dd7-4bc0-4ae6-805f-799c51919cff",
-            "name": "ANDゲート",
-            "type": "AND",
-            "children": [
-              "7f7ac691-a37f-4e1f-b20f-acaf0e1aa643",
-              "46a5b753-a3b6-4df3-a282-7f4f25e11276"
-            ],
-            "position": {
-              "x": -20,
-              "y": 450
-            }
-          },
-          {
-            "id": "b5ae6c35-7f30-4e6c-a6f0-0dc8af519818",
-            "name": "ANDゲート",
-            "type": "AND",
-            "children": [
-              "60dcf419-5457-41a6-8edd-6e974fa94a50",
-              "4ce351c0-2ba8-47d9-98f7-bfffde1cc594",
-              "51f5f79c-4d37-47b0-9390-21e30d42a614",
-              "aabe8e8e-c240-474a-ab84-cf195ba9fc75",
-              "8e6b8bfd-2904-4269-82fe-04de24131bc9"
-            ],
-            "position": {
-              "x": 940,
-              "y": 250
-            },
-            "collapsed": false
+  "id": "e870c452-77b5-40f4-a969-eabd2b99ee08",
+  "name": "サンプルPRAモデル",
+  "description": "ECCS注入失敗を対象としたサンプルFault Tree",
+  "version": 1,
+  "locale": "ja",
+  "createdAt": "2026-04-26T00:38:37.584Z",
+  "updatedAt": "2026-05-10T15:07:29.367Z",
+  "faultTrees": [
+    {
+      "id": "cf187f39-aba2-4cc1-9674-1401731bd665",
+      "name": "ECCS注入失敗 FT",
+      "topGateId": "3ded9df2-2df8-44be-8f8e-ffa7745f8213",
+      "gates": [
+        {
+          "id": "3ded9df2-2df8-44be-8f8e-ffa7745f8213",
+          "name": "ECCS注入失敗",
+          "type": "OR",
+          "children": [
+            "2ae889ba-5914-4f1c-af43-e19353152f76",
+            "b5ae6c35-7f30-4e6c-a6f0-0dc8af519818"
+          ],
+          "position": {
+            "x": 400,
+            "y": 50
           }
-        ]
-      },
-      {
-        "id": "c010528f-7713-4bbb-80bd-f460cb6b96b7",
-        "name": "除熱FT",
-        "topGateId": "43810738-79c1-4f8d-acf7-81e53042e86a",
-        "gates": [
-          {
-            "id": "43810738-79c1-4f8d-acf7-81e53042e86a",
-            "name": "TOP EVENT",
-            "type": "OR",
-            "children": [
-              "74b3bb44-7d03-4487-83a0-017c5d18afe9",
-              "0f1fdfb9-8885-4b40-a621-7c4e27a8e118",
-              "28b92623-8081-4c3a-a420-3835081bfcba"
-            ],
-            "position": {
-              "x": 400,
-              "y": 50
-            },
-            "collapsed": false
+        },
+        {
+          "id": "2ae889ba-5914-4f1c-af43-e19353152f76",
+          "name": "電源喪失",
+          "type": "OR",
+          "children": [
+            "b4d69dce-c17a-4244-86cb-b1c90d5879e3",
+            "98733dd7-4bc0-4ae6-805f-799c51919cff"
+          ],
+          "position": {
+            "x": -140,
+            "y": 250
           },
-          {
-            "id": "74b3bb44-7d03-4487-83a0-017c5d18afe9",
-            "name": "ANDゲート",
-            "type": "AND",
-            "children": [
-              "face8671-66aa-4853-8e7b-87339ed448fd",
-              "0d3535b8-716f-4792-879d-b4ad8c10e93c"
-            ],
-            "position": {
-              "x": 160,
-              "y": 250
-            }
+          "collapsed": false
+        },
+        {
+          "id": "98733dd7-4bc0-4ae6-805f-799c51919cff",
+          "name": "ANDゲート",
+          "type": "AND",
+          "children": [
+            "7f7ac691-a37f-4e1f-b20f-acaf0e1aa643",
+            "46a5b753-a3b6-4df3-a282-7f4f25e11276"
+          ],
+          "position": {
+            "x": -20,
+            "y": 450
           }
-        ]
-      },
-      {
-        "id": "cd1d3f6f-51a9-40fa-84d8-e0dc1a776ab5",
-        "name": "循環参照検証用1",
-        "topGateId": "d1eb74fd-c260-479f-a846-fe36b249c783",
-        "gates": [
-          {
-            "id": "d1eb74fd-c260-479f-a846-fe36b249c783",
-            "name": "TOP EVENT",
-            "type": "OR",
-            "children": [
-              "a8a5d4b4-4a3a-4e3b-a263-f272f1565bc1",
-              "3b4fcc8a-e540-47a3-915d-1f65693344ff"
-            ],
-            "position": {
-              "x": 400,
-              "y": 50
-            },
-            "collapsed": false
-          }
-        ]
-      },
-      {
-        "id": "dc2948b2-b736-4ab0-9e24-bad9cffa9fec",
-        "name": "循環参照検証用2",
-        "topGateId": "0e7bf2f9-178d-497f-8c1f-a19a85ffd041",
-        "gates": [
-          {
-            "id": "0e7bf2f9-178d-497f-8c1f-a19a85ffd041",
-            "name": "TOP EVENT",
-            "type": "OR",
-            "children": [
-              "5dd2c600-63b2-46f7-85ad-4c521745c1a0",
-              "eba0865d-4596-4b22-a284-e6cc4cffe25d",
-              "430968e5-4d9c-447d-8dcb-3341eef8dfc7"
-            ],
-            "position": {
-              "x": 400,
-              "y": 50
-            }
-          }
-        ]
-      },
-      {
-        "id": "3d61264e-4a5a-4d34-8777-ea5444e7dcf1",
-        "name": "地震用FT Test1",
-        "topGateId": "fb21a63e-336c-4a9c-9210-d2801683d484",
-        "gates": [
-          {
-            "id": "fb21a63e-336c-4a9c-9210-d2801683d484",
-            "name": "TOP EVENT",
-            "type": "OR",
-            "children": [
-              "e5d0da72-6467-4cbf-ae2b-a3023699dfd5",
-              "813cd2f4-8a11-47d2-9196-8db7f680fe90",
-              "8290b4d9-8ff4-40db-beae-118f074d48fe",
-              "4c2f0a78-e286-4af1-9a05-3b1be4062244",
-              "29c3116a-c495-4087-9ca0-5eb2bec667ab"
-            ],
-            "position": {
-              "x": 400,
-              "y": 50
-            }
-          }
-        ]
-      }
-    ],
-    "eventTrees": [
-      {
-        "id": "d0654510-8e04-4d58-a673-1e7cd95950c5",
-        "name": "New ET",
-        "initiatingEventId": "IE_1778255565935",
-        "functionalEvents": [
-          {
-            "id": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a",
-            "name": "注水機能",
-            "branches": [
-              { "id": "success", "label": "Success" },
-              { "id": "failure", "label": "Failure" }
-            ],
-            "linkedFaultTreeId": "cf187f39-aba2-4cc1-9674-1401731bd665",
-            "code": "ECCS1"
+        },
+        {
+          "id": "b5ae6c35-7f30-4e6c-a6f0-0dc8af519818",
+          "name": "ANDゲート",
+          "type": "AND",
+          "children": [
+            "60dcf419-5457-41a6-8edd-6e974fa94a50",
+            "4ce351c0-2ba8-47d9-98f7-bfffde1cc594",
+            "51f5f79c-4d37-47b0-9390-21e30d42a614",
+            "aabe8e8e-c240-474a-ab84-cf195ba9fc75",
+            "8e6b8bfd-2904-4269-82fe-04de24131bc9"
+          ],
+          "position": {
+            "x": 940,
+            "y": 250
           },
-          {
-            "id": "b3dce593-25e2-4239-8941-36654a6c96af",
-            "name": "除熱機能",
-            "branches": [
-              { "id": "success", "label": "Success", "description": "成功" },
-              { "id": "failure", "label": "Failure", "description": "失敗" }
-            ],
-            "linkedFaultTreeId": "c010528f-7713-4bbb-80bd-f460cb6b96b7",
-            "code": "ECCS2"
-          },
-          {
-            "id": "f7d340d7-fee3-4c18-a3aa-b246528d3fbb",
-            "name": "Header13",
-            "branches": [
-              { "id": "success", "label": "Success" },
-              { "id": "failure", "label": "Failure", "probability": 0.1 }
-            ],
-            "code": "HEA",
-            "linkedFaultTreeId": ""
-          }
-        ],
-        "sequences": [
-          {
-            "id": "ee8de310-1738-449b-9dbd-372ff9e170bd",
-            "path": [
-              { "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a", "branchId": "success" },
-              { "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af", "branchId": "success" }
-            ],
-            "endStateId": "16647e4a-e88e-4680-9379-824529ea06cf",
-            "name": "TEST-01"
-          },
-          {
-            "id": "6a8482c5-bfae-49d1-a52d-6a0796f27003",
-            "path": [
-              { "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a", "branchId": "success" },
-              { "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af", "branchId": "failure" }
-            ],
-            "endStateId": "89df86f8-f1ef-4425-8cbf-e90c58182d45",
-            "name": "TEST-02"
-          },
-          {
-            "id": "2f6b5331-b5e8-490f-bf46-956f0fdf3ee0",
-            "path": [
-              { "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a", "branchId": "failure" },
-              { "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af", "branchId": "success" }
-            ],
-            "endStateId": "16647e4a-e88e-4680-9379-824529ea06cf",
-            "name": "TEST-03"
-          },
-          {
-            "id": "fd7666d9-8967-4a30-881b-a39ff6e47b42",
-            "path": [
-              { "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a", "branchId": "failure" },
-              { "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af", "branchId": "failure" }
-            ],
-            "endStateId": "1b3d73da-bc82-4715-a610-54d83a8256c5",
-            "name": "TEST-04"
-          }
-        ]
-      },
-      {
-        "id": "315210c7-324f-4a5c-93b5-ca6b04376d42",
-        "name": "トランスファーET検証用2",
-        "initiatingEventId": "898e9e47-586a-4132-ac5d-e88cdd2d7da9",
-        "functionalEvents": [
-          {
-            "id": "846c1588-703f-4d77-bd11-86188eb062bd",
-            "name": "Header",
-            "branches": [
-              { "id": "success", "label": "成功" },
-              { "id": "failure", "label": "失敗" }
-            ],
-            "code": "HEA",
-            "linkedFaultTreeId": "cf187f39-aba2-4cc1-9674-1401731bd665"
-          }
-        ],
-        "sequences": [
-          {
-            "id": "c595d301-212d-47a9-a3c2-36fe8fd45f8f",
-            "path": [
-              { "functionalEventId": "846c1588-703f-4d77-bd11-86188eb062bd", "branchId": "success" }
-            ],
-            "endStateId": "16647e4a-e88e-4680-9379-824529ea06cf",
-            "name": "TEST-01"
-          },
-          {
-            "id": "26a438a3-82dd-40f0-8461-487f4bd10582",
-            "path": [
-              { "functionalEventId": "846c1588-703f-4d77-bd11-86188eb062bd", "branchId": "failure" }
-            ],
-            "endStateId": "1b3d73da-bc82-4715-a610-54d83a8256c5",
-            "name": "TEST-02"
-          }
-        ]
-      },
-      {
-        "id": "4705f10f-e6bc-47f6-97bb-4fbb95a8ceef",
-        "name": "トランスファーET検証用1",
-        "initiatingEventId": "898e9e47-586a-4132-ac5d-e88cdd2d7da9",
-        "functionalEvents": [
-          {
-            "id": "30b9d50b-a1a7-4dcd-82ae-ef02df115536",
-            "name": "Header",
-            "branches": [
-              { "id": "success", "label": "成功" },
-              { "id": "failure", "label": "失敗", "probability": 0.5 }
-            ],
-            "code": "HEA",
-            "linkedFaultTreeId": ""
-          }
-        ],
-        "sequences": [
-          {
-            "id": "e8c2fb2f-ea3e-4220-8e12-4fc1dc3b6eb8",
-            "path": [
-              { "functionalEventId": "30b9d50b-a1a7-4dcd-82ae-ef02df115536", "branchId": "success" }
-            ],
-            "endStateId": "16647e4a-e88e-4680-9379-824529ea06cf",
-            "name": "TEST-01"
-          },
-          {
-            "id": "d7578d94-49fd-4612-8b22-52f2c549a999",
-            "path": [
-              { "functionalEventId": "30b9d50b-a1a7-4dcd-82ae-ef02df115536", "branchId": "failure" }
-            ],
-            "endStateId": "182706df-5681-4721-8c8c-99911fa5b71b",
-            "name": "TEST-02",
-            "transferETId": "315210c7-324f-4a5c-93b5-ca6b04376d42"
-          }
-        ]
-      }
-    ],
-    "basicEvents": [
-      {
-        "id": "60dcf419-5457-41a6-8edd-6e974fa94a50",
-        "name": "HPCIポンプ",
-        "tags": ["ECCS", "ポンプ"],
-        "failureRate": 0.001,
-        "repairTime": 24,
-        "probability": 0.01,
-        "missionTime": 24,
-        "distribution": { "type": "lognormal", "mean": 0.00003, "errorFactor": 3 },
-        "source": "NUREG/CR-6928",
-        "memo": "ECCSポンプ起動失敗",
-        "parameterId": "79a2529c-dee4-4d7f-b402-5c9e3c17dea4",
-        "failureType": "demand",
-        "position": { "x": 460, "y": 450 },
-        "seismicFragilityId": "0a28cd4b-490a-41cb-8773-7426a5ac8122",
-        "demands": 10,
-        "eventId": "test1"
-      },
-      {
-        "id": "7f7ac691-a37f-4e1f-b20f-acaf0e1aa643",
-        "name": "DG-FAIL-START",
-        "tags": ["電源", "DG"],
-        "failureRate": 0.03,
-        "probability": 0.72,
-        "distribution": { "type": "lognormal", "mean": 0.03, "errorFactor": 3 },
-        "source": "NUREG/CR-6928",
-        "memo": "ディーゼル発電機起動失敗",
-        "position": { "x": -140, "y": 650 },
-        "eventId": "DG-START-ID"
-      },
-      {
-        "id": "aabe8e8e-c240-474a-ab84-cf195ba9fc75",
-        "name": "MOV-TRANSFER-FAIL",
-        "tags": ["弁", "MOV"],
-        "failureRate": 0.0005,
-        "probability": 0.0005,
-        "distribution": { "type": "lognormal", "mean": 0.0005, "errorFactor": 5 },
-        "source": "NUREG/CR-6928",
-        "memo": "電動弁開放失敗",
-        "position": { "x": 1180, "y": 450 }
-      },
-      {
-        "id": "4ce351c0-2ba8-47d9-98f7-bfffde1cc594",
-        "name": "HPCIポンプ_2",
-        "tags": ["HPI", "注入"],
-        "failureRate": 0.0001,
-        "probability": 0.0024000000000000002,
-        "distribution": { "type": "beta", "mean": 0.0002, "errorFactor": 3 },
-        "source": "NUREG/CR-6928",
-        "memo": "高圧注入系トレイン故障",
-        "position": { "x": 700, "y": 450 },
-        "missionTime": 24,
-        "parameterId": "038628ae-6af9-41ee-945e-fedaf7776c86",
-        "failureType": "time",
-        "eventId": "test2"
-      },
-      {
-        "id": "b4d69dce-c17a-4244-86cb-b1c90d5879e3",
-        "name": "LPI-TRAIN-FAIL",
-        "tags": ["LPI", "注入"],
-        "failureRate": 0.01,
-        "probability": 0.24,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "NUREG/CR-6928",
-        "memo": "低圧注入系トレイン故障",
-        "position": { "x": -260, "y": 450 }
-      },
-      {
-        "id": "51f5f79c-4d37-47b0-9390-21e30d42a614",
-        "name": "新規基事象",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.0001,
-        "probability": 0.0001,
-        "missionTime": 24,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 940, "y": 450 },
-        "seismicFragilityId": "0a28cd4b-490a-41cb-8773-7426a5ac8122"
-      },
-      {
-        "id": "46a5b753-a3b6-4df3-a282-7f4f25e11276",
-        "name": "外部電源",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.0001,
-        "probability": 0.0001,
-        "missionTime": 24,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 100, "y": 650 }
-      },
-      {
-        "id": "a8a5d4b4-4a3a-4e3b-a263-f272f1565bc1",
-        "name": "新規基事象_2",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.0001,
-        "probability": 0.0001,
-        "missionTime": 24,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 280, "y": 250 }
-      },
-      {
-        "id": "8e6b8bfd-2904-4269-82fe-04de24131bc9",
-        "name": "新規基事象2",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.0001,
-        "probability": 0.0001,
-        "missionTime": 24,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 1420, "y": 450 }
-      },
-      {
-        "id": "face8671-66aa-4853-8e7b-87339ed448fd",
-        "name": "新規基事象_3",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.0001,
-        "probability": 0.0001,
-        "missionTime": 24,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 40, "y": 450 },
-        "seismicFragilityId": "d21dff14-2252-4a37-b98d-3fe5a5fd026b"
-      },
-      {
-        "id": "0d3535b8-716f-4792-879d-b4ad8c10e93c",
-        "name": "新規基事象2_2",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.0001,
-        "probability": 0.0001,
-        "missionTime": 24,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 280, "y": 450 },
-        "seismicFragilityId": "0a28cd4b-490a-41cb-8773-7426a5ac8122"
-      },
-      {
-        "id": "5dd2c600-63b2-46f7-85ad-4c521745c1a0",
-        "name": "新規基事象_4",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.01,
-        "probability": 0.24,
-        "missionTime": 24,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 160, "y": 250 }
-      },
-      {
-        "id": "eba0865d-4596-4b22-a284-e6cc4cffe25d",
-        "name": "新規基事象_5",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.01,
-        "probability": 0.24,
-        "missionTime": 24,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 400, "y": 250 }
-      },
-      {
-        "id": "e5d0da72-6467-4cbf-ae2b-a3023699dfd5",
-        "name": "新規基事象_6",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.0001,
-        "probability": 0.0001,
-        "missionTime": 24,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": -80, "y": 250 }
-      },
-      {
-        "id": "813cd2f4-8a11-47d2-9196-8db7f680fe90",
-        "name": "新規基事象_7",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.0001,
-        "probability": 0.0001,
-        "missionTime": 24,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 160, "y": 250 }
-      },
-      {
-        "id": "8290b4d9-8ff4-40db-beae-118f074d48fe",
-        "name": "新規基事象_8",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.0001,
-        "probability": 0.0001,
-        "missionTime": 24,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 400, "y": 250 }
-      },
-      {
-        "id": "4c2f0a78-e286-4af1-9a05-3b1be4062244",
-        "name": "新規基事象_9",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.0001,
-        "probability": 0.0001,
-        "missionTime": 24,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 640, "y": 250 }
-      },
-      {
-        "id": "29c3116a-c495-4087-9ca0-5eb2bec667ab",
-        "name": "新規基事象_10",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.0001,
-        "probability": 0.0001,
-        "missionTime": 24,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 880, "y": 250 }
-      },
-      {
-        "id": "0f1fdfb9-8885-4b40-a621-7c4e27a8e118",
-        "name": "新規基事象_11",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.0001,
-        "probability": 0.0048000000000000004,
-        "missionTime": 48,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 400, "y": 250 },
-        "eventId": "TEST1"
-      },
-      {
-        "id": "28b92623-8081-4c3a-a420-3835081bfcba",
-        "name": "新規基事象_12",
-        "eventType": "basicEvent",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0.00001,
-        "probability": 0.00024000000000000003,
-        "missionTime": 24,
-        "demands": 1,
-        "distribution": { "type": "lognormal", "mean": 0.0001, "errorFactor": 3 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 640, "y": 250 }
-      },
-      {
-        "id": "430968e5-4d9c-447d-8dcb-3341eef8dfc7",
-        "name": "トランスファ",
-        "eventType": "transferGate",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0,
-        "probability": 0,
-        "distribution": { "type": "point", "mean": 0 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 640, "y": 250 },
-        "linkedFaultTreeId": "cd1d3f6f-51a9-40fa-84d8-e0dc1a776ab5"
-      },
-      {
-        "id": "3b4fcc8a-e540-47a3-915d-1f65693344ff",
-        "name": "トランスファ_2",
-        "eventType": "transferGate",
-        "tags": [],
-        "failureType": "time",
-        "failureRate": 0,
-        "probability": 0,
-        "distribution": { "type": "point", "mean": 0 },
-        "source": "",
-        "memo": "",
-        "position": { "x": 520, "y": 250 },
-        "linkedFaultTreeId": "dc2948b2-b736-4ab0-9e24-bad9cffe9fec"
-      }
-    ],
-    "houseEvents": [],
-    "ccfGroups": [
-      {
-        "id": "9f9884e9-3c95-4308-9665-73234788ba49",
-        "name": "新規CCFグループ",
-        "model": "beta_factor",
-        "members": ["aabe8e8e-c240-474a-ab84-cf195ba9fc75"],
-        "parameters": { "beta": 0.1 }
-      },
-      {
-        "id": "03e92620-1640-46cb-93d0-4d5a9d605b50",
-        "name": "新規CCFグループ2",
-        "model": "beta_factor",
-        "members": [
-          "8290b4d9-8ff4-40db-beae-118f074d48fe",
-          "29c3116a-c495-4087-9ca0-5eb2bec667ab",
-          "60dcf419-5457-41a6-8edd-6e974fa94a50",
-          "4ce351c0-2ba8-47d9-98f7-bfffde1cc594"
-        ],
-        "parameters": { "beta": 0.1 }
-      }
-    ],
-    "initiatingEvents": [
-      {
-        "id": "898e9e47-586a-4132-ac5d-e88cdd2d7da9",
-        "name": "TEST p=1",
-        "frequency": 1,
-        "description": "小破断LOCA",
-        "code": "TEST",
-        "linkedFaultTreeId": ""
-      },
-      {
-        "id": "IE_1778255565935",
-        "name": "小LOCA",
-        "code": "SLOCA",
-        "frequency": 0.5,
-        "linkedFaultTreeId": ""
-      }
-    ],
-    "endStates": [
-      {
-        "id": "16647e4a-e88e-4680-9379-824529ea06cf",
-        "name": "OK",
-        "category": "success",
-        "description": "正常",
-        "color": "#00D68F",
-        "categories": ["success"]
-      },
-      {
-        "id": "1b3d73da-bc82-4715-a610-54d83a8256c5",
-        "name": "TQUX",
-        "category": "core_damage",
-        "description": "過渡事象+給水喪失+高圧注入失敗+減圧失敗",
-        "color": "#FF4757",
-        "categories": ["core_damage"]
-      },
-      {
-        "id": "89df86f8-f1ef-4425-8cbf-e90c58182d45",
-        "name": "TQUV",
-        "category": "core_damage",
-        "description": "過渡事象+給水喪失+高圧注入成功+格納容器冷却失敗",
-        "color": "#FF6B81",
-        "categories": ["core_damage"]
-      },
-      {
-        "id": "4eca73ec-1c3f-4782-9432-099981b92367",
-        "name": "SBO-CD",
-        "category": "core_damage",
-        "description": "全電源喪失→炉心損傷",
-        "color": "#FFA502",
-        "categories": ["core_damage"]
-      },
-      {
-        "id": "5191534a-77b3-445a-b754-3c07e16824fb",
-        "name": "RBR",
-        "categories": ["大規模早期放出", "core_damage"],
-        "color": "#FF4757"
-      },
-      {
-        "id": "a6bd0ca8-aa12-48f9-a692-e1b2e3443ae4",
-        "name": "TW",
-        "categories": ["core_damage", "大規模早期放出"],
-        "color": "#FF4757"
-      },
-      {
-        "id": "182706df-5681-4721-8c8c-99911fa5b71b",
-        "name": "暫定",
-        "categories": ["core_damage"],
-        "color": "#FF4757"
-      }
-    ],
-    "parameters": [
-      {
-        "id": "79a2529c-dee4-4d7f-b402-5c9e3c17dea4",
-        "name": "ポンプ起動失敗",
-        "failureType": "demand",
-        "value": 0.001,
-        "source": "NUREGxxxx",
-        "description": ""
-      },
-      {
-        "id": "038628ae-6af9-41ee-945e-fedaf7776c86",
-        "name": "ポンプ継続運転失敗",
-        "failureType": "time",
-        "value": 0.0001,
-        "source": "NUREGxxxx",
-        "description": ""
-      }
-    ],
-    "seismicHazardCurves": [],
-    "seismicHazards": [
-      {
-        "id": "69b1ffb1-b462-45c0-ae0f-86e807bbfc01",
-        "name": "サイトA",
-        "fractiles": [
-          {
-            "id": "9ea5e07b-ba02-4821-b3cb-e145586d586a",
-            "name": "Mean",
-            "percentile": -1,
-            "points": [
-              { "pga": 0.1, "frequency": 0.001 },
-              { "pga": 0.5, "frequency": 0.0001 },
-              { "pga": 1, "frequency": 0.00001 }
-            ]
-          },
-          {
-            "id": "bacfb322-5a08-4c47-a2a2-1737f8661ef8",
-            "name": "50%",
-            "percentile": 0.5,
-            "points": [
-              { "pga": 0.1, "frequency": 0.001 },
-              { "pga": 0.5, "frequency": 0.0001 },
-              { "pga": 1, "frequency": 0.00001 }
-            ]
-          },
-          {
-            "id": "5ad4fc47-a552-4d32-9bf1-4aa0bb116953",
-            "name": "95%",
-            "percentile": 0.95,
-            "points": [
-              { "pga": 0.1, "frequency": 0.005 },
-              { "pga": 0.5, "frequency": 0.0005 },
-              { "pga": 1, "frequency": 0.00005 }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "dccedd97-39c7-4e6c-b578-9ec91e27a846",
-        "name": "サイトB",
-        "fractiles": [
-          {
-            "id": "c8f72139-46b5-4d94-942b-4a778ed90a27",
-            "name": "Mean",
-            "percentile": -1,
-            "points": [
-              { "pga": 0, "frequency": 1 },
-              { "pga": 0.1, "frequency": 0.1 },
-              { "pga": 0.5, "frequency": 0.01 },
-              { "pga": 1, "frequency": 0.001 },
-              { "pga": 1.5, "frequency": 0.0001 },
-              { "pga": 2, "frequency": 0.00001 }
-            ]
-          },
-          {
-            "id": "c272507e-2610-4240-9fc2-30b027c6459a",
-            "name": "5%",
-            "percentile": 0.5,
-            "points": [
-              { "pga": 0, "frequency": 1 },
-              { "pga": 0.1, "frequency": 0.1 },
-              { "pga": 0.5, "frequency": 0.01 },
-              { "pga": 1, "frequency": 0.001 },
-              { "pga": 1.5, "frequency": 0.0001 },
-              { "pga": 2, "frequency": 0.00001 }
-            ]
-          },
-          {
-            "id": "99a3b632-c598-4811-84bb-00a54b727ccc",
-            "name": "50%",
-            "percentile": 0.5,
-            "points": [
-              { "pga": 0, "frequency": 1 },
-              { "pga": 0.1, "frequency": 0.1 },
-              { "pga": 0.5, "frequency": 0.01 },
-              { "pga": 1, "frequency": 0.001 },
-              { "pga": 1.5, "frequency": 0.0001 },
-              { "pga": 2, "frequency": 0.00001 }
-            ]
-          },
-          {
-            "id": "7470bcb1-4119-4c2a-9f1b-0f9604773721",
-            "name": "95%",
-            "percentile": 0.5,
-            "points": [
-              { "pga": 0, "frequency": 1 },
-              { "pga": 0.1, "frequency": 0.1 },
-              { "pga": 0.5, "frequency": 0.01 },
-              { "pga": 1, "frequency": 0.001 },
-              { "pga": 1.5, "frequency": 0.0001 },
-              { "pga": 2, "frequency": 0.00001 }
-            ]
-          }
-        ]
-      },
-      {
-        "id": "6dea5736-85b6-4a6e-a729-d0d5d417f45e",
-        "name": "新しいハザード曲線",
-        "fractiles": [
-          {
-            "id": "4552ca00-d8c8-4ebd-ba5d-be9c3f293350",
-            "name": "Mean",
-            "percentile": -1,
-            "points": [
-              { "pga": 0.1, "frequency": 0.001 },
-              { "pga": 0.5, "frequency": 0.0001 },
-              { "pga": 1, "frequency": 0.00001 }
-            ]
-          }
-        ]
-      }
-    ],
-    "seismicFragilities": [
-      {
-        "id": "0a28cd4b-490a-41cb-8773-7426a5ac8122",
-        "name": "ポンプ",
-        "am": 1.1,
-        "betaR": 0.2,
-        "betaU": 0.2,
-        "type": "lognormal",
-        "points": [
-          { "pga": 0.1, "probability": 0.1 },
-          { "pga": 0.5, "probability": 0.5 },
-          { "pga": 1, "probability": 0.9 }
-        ]
-      },
-      {
-        "id": "d21dff14-2252-4a37-b98d-3fe5a5fd026b",
-        "name": "手動弁A",
-        "am": 2,
-        "betaR": 0.2,
-        "betaU": 0.3,
-        "type": "lognormal",
-        "points": []
-      },
-      {
-        "id": "0125d52e-688a-490d-b04a-8be952af8f97",
-        "name": "離散値フラジリティ",
-        "type": "discrete",
-        "am": 1,
-        "betaR": 0.2,
-        "betaU": 0.2,
-        "points": [
-          { "pga": 0, "probability": 0 },
-          { "pga": 1, "probability": 0.01 },
-          { "pga": 1.001, "probability": 1 },
-          { "pga": 2, "probability": 1 }
-        ]
-      }
-    ],
-    "seismicSettings": {
-      "hazardCurveId": "dccedd97-39c7-4e6c-b578-9ec91e27a846",
-      "minPGA": 0.05,
-      "maxPGA": 2,
-      "intervals": 20,
-      "selectedETIds": [
-        "d0654510-8e04-4d58-a673-1e7cd95950c5",
-        "315210c7-324f-4a5c-93b5-ca6b04376d42"
-      ],
-      "uncertaintyEnabled": true
+          "collapsed": false
+        }
+      ]
     },
-    "quantificationSettings": {
-      "cutOff": 1e-20,
-      "approximation": "bdd_exact",
-      "monteCarloSamples": 10000,
-      "useLHS": true,
-      "runUncertainty": true
+    {
+      "id": "c010528f-7713-4bbb-80bd-f460cb6b96b7",
+      "name": "除熱FT",
+      "topGateId": "43810738-79c1-4f8d-acf7-81e53042e86a",
+      "gates": [
+        {
+          "id": "43810738-79c1-4f8d-acf7-81e53042e86a",
+          "name": "TOP EVENT",
+          "type": "OR",
+          "children": [
+            "74b3bb44-7d03-4487-83a0-017c5d18afe9",
+            "0f1fdfb9-8885-4b40-a621-7c4e27a8e118",
+            "28b92623-8081-4c3a-a420-3835081bfcba"
+          ],
+          "position": {
+            "x": 400,
+            "y": 50
+          },
+          "collapsed": false
+        },
+        {
+          "id": "74b3bb44-7d03-4487-83a0-017c5d18afe9",
+          "name": "ANDゲート",
+          "type": "AND",
+          "children": [
+            "face8671-66aa-4853-8e7b-87339ed448fd",
+            "0d3535b8-716f-4792-879d-b4ad8c10e93c"
+          ],
+          "position": {
+            "x": 160,
+            "y": 250
+          }
+        }
+      ]
+    },
+    {
+      "id": "cd1d3f6f-51a9-40fa-84d8-e0dc1a776ab5",
+      "name": "循環参照検証用1",
+      "topGateId": "d1eb74fd-c260-479f-a846-fe36b249c783",
+      "gates": [
+        {
+          "id": "d1eb74fd-c260-479f-a846-fe36b249c783",
+          "name": "TOP EVENT",
+          "type": "OR",
+          "children": [
+            "a8a5d4b4-4a3a-4e3b-a263-f272f1565bc1",
+            "3b4fcc8a-e540-47a3-915d-1f65693344ff"
+          ],
+          "position": {
+            "x": 400,
+            "y": 50
+          },
+          "collapsed": false
+        }
+      ]
+    },
+    {
+      "id": "dc2948b2-b736-4ab0-9e24-bad9cffa9fec",
+      "name": "循環参照検証用2",
+      "topGateId": "0e7bf2f9-178d-497f-8c1f-a19a85ffd041",
+      "gates": [
+        {
+          "id": "0e7bf2f9-178d-497f-8c1f-a19a85ffd041",
+          "name": "TOP EVENT",
+          "type": "OR",
+          "children": [
+            "5dd2c600-63b2-46f7-85ad-4c521745c1a0",
+            "eba0865d-4596-4b22-a284-e6cc4cffe25d",
+            "430968e5-4d9c-447d-8dcb-3341eef8dfc7"
+          ],
+          "position": {
+            "x": 400,
+            "y": 50
+          }
+        }
+      ]
+    },
+    {
+      "id": "3d61264e-4a5a-4d34-8777-ea5444e7dcf1",
+      "name": "地震用FT Test1",
+      "topGateId": "fb21a63e-336c-4a9c-9210-d2801683d484",
+      "gates": [
+        {
+          "id": "fb21a63e-336c-4a9c-9210-d2801683d484",
+          "name": "TOP EVENT",
+          "type": "OR",
+          "children": [
+            "e5d0da72-6467-4cbf-ae2b-a3023699dfd5",
+            "813cd2f4-8a11-47d2-9196-8db7f680fe90",
+            "8290b4d9-8ff4-40db-beae-118f074d48fe",
+            "4c2f0a78-e286-4af1-9a05-3b1be4062244",
+            "29c3116a-c495-4087-9ca0-5eb2bec667ab"
+          ],
+          "position": {
+            "x": 400,
+            "y": 50
+          }
+        }
+      ]
     }
-  };
+  ],
+  "eventTrees": [
+    {
+      "id": "d0654510-8e04-4d58-a673-1e7cd95950c5",
+      "name": "New ET",
+      "initiatingEventId": "IE_1778255565935",
+      "functionalEvents": [
+        {
+          "id": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a",
+          "name": "注水機能",
+          "branches": [
+            {
+              "id": "success",
+              "label": "Success"
+            },
+            {
+              "id": "failure",
+              "label": "Failure"
+            }
+          ],
+          "linkedFaultTreeId": "cf187f39-aba2-4cc1-9674-1401731bd665",
+          "code": "ECCS1"
+        },
+        {
+          "id": "b3dce593-25e2-4239-8941-36654a6c96af",
+          "name": "除熱機能",
+          "branches": [
+            {
+              "id": "success",
+              "label": "Success",
+              "description": "成功"
+            },
+            {
+              "id": "failure",
+              "label": "Failure",
+              "description": "失敗"
+            }
+          ],
+          "linkedFaultTreeId": "c010528f-7713-4bbb-80bd-f460cb6b96b7",
+          "code": "ECCS2"
+        },
+        {
+          "id": "f7d340d7-fee3-4c18-a3aa-b246528d3fbb",
+          "name": "Header13",
+          "branches": [
+            {
+              "id": "success",
+              "label": "Success"
+            },
+            {
+              "id": "failure",
+              "label": "Failure",
+              "description": "",
+              "probability": 0.1
+            }
+          ],
+          "code": "HEA",
+          "linkedFaultTreeId": ""
+        }
+      ],
+      "sequences": [
+        {
+          "id": "ee8de310-1738-449b-9dbd-372ff9e170bd",
+          "path": [
+            {
+              "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a",
+              "branchId": "success"
+            },
+            {
+              "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af",
+              "branchId": "success"
+            }
+          ],
+          "endStateId": "16647e4a-e88e-4680-9379-824529ea06cf",
+          "name": "TEST-01"
+        },
+        {
+          "id": "6a8482c5-bfae-49d1-a52d-6a0796f27003",
+          "path": [
+            {
+              "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a",
+              "branchId": "success"
+            },
+            {
+              "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af",
+              "branchId": "failure"
+            }
+          ],
+          "endStateId": "89df86f8-f1ef-4425-8cbf-e90c58182d45",
+          "name": "TEST-02"
+        },
+        {
+          "id": "2f6b5331-b5e8-490f-bf46-956f0fdf3ee0",
+          "path": [
+            {
+              "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a",
+              "branchId": "failure"
+            },
+            {
+              "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af",
+              "branchId": "success"
+            }
+          ],
+          "endStateId": "16647e4a-e88e-4680-9379-824529ea06cf",
+          "name": "TEST-03"
+        },
+        {
+          "id": "fd7666d9-8967-4a30-881b-a39ff6e47b42",
+          "path": [
+            {
+              "functionalEventId": "b5f5a0ce-02fa-4e51-ad9e-874ccfac0e5a",
+              "branchId": "failure"
+            },
+            {
+              "functionalEventId": "b3dce593-25e2-4239-8941-36654a6c96af",
+              "branchId": "failure"
+            }
+          ],
+          "endStateId": "1b3d73da-bc82-4715-a610-54d83a8256c5",
+          "name": "TEST-04"
+        }
+      ]
+    },
+    {
+      "id": "315210c7-324f-4a5c-93b5-ca6b04376d42",
+      "name": "トランスファーET検証用2",
+      "initiatingEventId": "898e9e47-586a-4132-ac5d-e88cdd2d7da9",
+      "functionalEvents": [
+        {
+          "id": "846c1588-703f-4d77-bd11-86188eb062bd",
+          "name": "Header",
+          "branches": [
+            {
+              "id": "success",
+              "label": "成功"
+            },
+            {
+              "id": "failure",
+              "label": "失敗"
+            }
+          ],
+          "code": "HEA",
+          "linkedFaultTreeId": "cf187f39-aba2-4cc1-9674-1401731bd665"
+        }
+      ],
+      "sequences": [
+        {
+          "id": "c595d301-212d-47a9-a3c2-36fe8fd45f8f",
+          "path": [
+            {
+              "functionalEventId": "846c1588-703f-4d77-bd11-86188eb062bd",
+              "branchId": "success"
+            }
+          ],
+          "endStateId": "16647e4a-e88e-4680-9379-824529ea06cf",
+          "name": "TEST-01"
+        },
+        {
+          "id": "26a438a3-82dd-40f0-8461-487f4bd10582",
+          "path": [
+            {
+              "functionalEventId": "846c1588-703f-4d77-bd11-86188eb062bd",
+              "branchId": "failure"
+            }
+          ],
+          "endStateId": "1b3d73da-bc82-4715-a610-54d83a8256c5",
+          "name": "TEST-02"
+        }
+      ]
+    },
+    {
+      "id": "4705f10f-e6bc-47f6-97bb-4fbb95a8ceef",
+      "name": "トランスファーET検証用1",
+      "initiatingEventId": "898e9e47-586a-4132-ac5d-e88cdd2d7da9",
+      "functionalEvents": [
+        {
+          "id": "30b9d50b-a1a7-4dcd-82ae-ef02df115536",
+          "name": "Header",
+          "branches": [
+            {
+              "id": "success",
+              "label": "成功"
+            },
+            {
+              "id": "failure",
+              "label": "失敗",
+              "probability": 0.5
+            }
+          ],
+          "code": "HEA",
+          "linkedFaultTreeId": ""
+        }
+      ],
+      "sequences": [
+        {
+          "id": "e8c2fb2f-ea3e-4220-8e12-4fc1dc3b6eb8",
+          "path": [
+            {
+              "functionalEventId": "30b9d50b-a1a7-4dcd-82ae-ef02df115536",
+              "branchId": "success"
+            }
+          ],
+          "endStateId": "16647e4a-e88e-4680-9379-824529ea06cf",
+          "name": "TEST-01"
+        },
+        {
+          "id": "d7578d94-49fd-4612-8b22-52f2c549a999",
+          "path": [
+            {
+              "functionalEventId": "30b9d50b-a1a7-4dcd-82ae-ef02df115536",
+              "branchId": "failure"
+            }
+          ],
+          "endStateId": "182706df-5681-4721-8c8c-99911fa5b71b",
+          "name": "TEST-02",
+          "transferETId": "315210c7-324f-4a5c-93b5-ca6b04376d42"
+        }
+      ]
+    }
+  ],
+  "basicEvents": [
+    {
+      "id": "60dcf419-5457-41a6-8edd-6e974fa94a50",
+      "name": "HPCIポンプ",
+      "tags": [
+        "ECCS",
+        "ポンプ"
+      ],
+      "failureRate": 0.001,
+      "repairTime": 24,
+      "probability": 0.01,
+      "missionTime": 24,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.00003,
+        "errorFactor": 3
+      },
+      "source": "NUREG/CR-6928",
+      "memo": "ECCSポンプ起動失敗",
+      "parameterId": "79a2529c-dee4-4d7f-b402-5c9e3c17dea4",
+      "failureType": "demand",
+      "position": {
+        "x": 460,
+        "y": 450
+      },
+      "seismicFragilityId": "0a28cd4b-490a-41cb-8773-7426a5ac8122",
+      "demands": 10,
+      "eventId": "test1"
+    },
+    {
+      "id": "7f7ac691-a37f-4e1f-b20f-acaf0e1aa643",
+      "name": "DG-FAIL-START",
+      "tags": [
+        "電源",
+        "DG"
+      ],
+      "failureRate": 0.03,
+      "probability": 0.72,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.03,
+        "errorFactor": 3
+      },
+      "source": "NUREG/CR-6928",
+      "memo": "ディーゼル発電機起動失敗",
+      "position": {
+        "x": -140,
+        "y": 650
+      },
+      "eventId": "DG-START-ID"
+    },
+    {
+      "id": "aabe8e8e-c240-474a-ab84-cf195ba9fc75",
+      "name": "MOV-TRANSFER-FAIL",
+      "tags": [
+        "弁",
+        "MOV"
+      ],
+      "failureRate": 0.0005,
+      "probability": 0.0005,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0005,
+        "errorFactor": 5
+      },
+      "source": "NUREG/CR-6928",
+      "memo": "電動弁開放失敗",
+      "position": {
+        "x": 1180,
+        "y": 450
+      }
+    },
+    {
+      "id": "4ce351c0-2ba8-47d9-98f7-bfffde1cc594",
+      "name": "HPCIポンプ_2",
+      "tags": [
+        "HPI",
+        "注入"
+      ],
+      "failureRate": 0.0001,
+      "probability": 0.0024000000000000002,
+      "distribution": {
+        "type": "beta",
+        "mean": 0.0002,
+        "errorFactor": 3
+      },
+      "source": "NUREG/CR-6928",
+      "memo": "高圧注入系トレイン故障",
+      "position": {
+        "x": 700,
+        "y": 450
+      },
+      "missionTime": 24,
+      "parameterId": "038628ae-6af9-41ee-945e-fedaf7776c86",
+      "failureType": "time",
+      "eventId": "test2"
+    },
+    {
+      "id": "b4d69dce-c17a-4244-86cb-b1c90d5879e3",
+      "name": "LPI-TRAIN-FAIL",
+      "tags": [
+        "LPI",
+        "注入"
+      ],
+      "failureRate": 0.01,
+      "probability": 0.24,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "NUREG/CR-6928",
+      "memo": "低圧注入系トレイン故障",
+      "position": {
+        "x": -260,
+        "y": 450
+      }
+    },
+    {
+      "id": "51f5f79c-4d37-47b0-9390-21e30d42a614",
+      "name": "新規基事象",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.0001,
+      "probability": 0.0001,
+      "missionTime": 24,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 940,
+        "y": 450
+      },
+      "seismicFragilityId": "0a28cd4b-490a-41cb-8773-7426a5ac8122"
+    },
+    {
+      "id": "46a5b753-a3b6-4df3-a282-7f4f25e11276",
+      "name": "外部電源",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.0001,
+      "probability": 0.0001,
+      "missionTime": 24,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 100,
+        "y": 650
+      }
+    },
+    {
+      "id": "a8a5d4b4-4a3a-4e3b-a263-f272f1565bc1",
+      "name": "新規基事象_2",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.0001,
+      "probability": 0.0001,
+      "missionTime": 24,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 280,
+        "y": 250
+      }
+    },
+    {
+      "id": "8e6b8bfd-2904-4269-82fe-04de24131bc9",
+      "name": "新規基事象2",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.0001,
+      "probability": 0.0001,
+      "missionTime": 24,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 1420,
+        "y": 450
+      }
+    },
+    {
+      "id": "face8671-66aa-4853-8e7b-87339ed448fd",
+      "name": "新規基事象_3",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.0001,
+      "probability": 0.0001,
+      "missionTime": 24,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 40,
+        "y": 450
+      },
+      "seismicFragilityId": "d21dff14-2252-4a37-b98d-3fe5a5fd026b"
+    },
+    {
+      "id": "0d3535b8-716f-4792-879d-b4ad8c10e93c",
+      "name": "新規基事象2_2",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.0001,
+      "probability": 0.0001,
+      "missionTime": 24,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 280,
+        "y": 450
+      },
+      "seismicFragilityId": "0a28cd4b-490a-41cb-8773-7426a5ac8122"
+    },
+    {
+      "id": "5dd2c600-63b2-46f7-85ad-4c521745c1a0",
+      "name": "新規基事象_4",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.01,
+      "probability": 0.24,
+      "missionTime": 24,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 160,
+        "y": 250
+      }
+    },
+    {
+      "id": "eba0865d-4596-4b22-a284-e6cc4cffe25d",
+      "name": "新規基事象_5",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.01,
+      "probability": 0.24,
+      "missionTime": 24,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 400,
+        "y": 250
+      }
+    },
+    {
+      "id": "e5d0da72-6467-4cbf-ae2b-a3023699dfd5",
+      "name": "新規基事象_6",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.0001,
+      "probability": 0.0001,
+      "missionTime": 24,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": -80,
+        "y": 250
+      }
+    },
+    {
+      "id": "813cd2f4-8a11-47d2-9196-8db7f680fe90",
+      "name": "新規基事象_7",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.0001,
+      "probability": 0.0001,
+      "missionTime": 24,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 160,
+        "y": 250
+      }
+    },
+    {
+      "id": "8290b4d9-8ff4-40db-beae-118f074d48fe",
+      "name": "新規基事象_8",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.0001,
+      "probability": 0.0001,
+      "missionTime": 24,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 400,
+        "y": 250
+      }
+    },
+    {
+      "id": "4c2f0a78-e286-4af1-9a05-3b1be4062244",
+      "name": "新規基事象_9",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.0001,
+      "probability": 0.0001,
+      "missionTime": 24,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 640,
+        "y": 250
+      }
+    },
+    {
+      "id": "29c3116a-c495-4087-9ca0-5eb2bec667ab",
+      "name": "新規基事象_10",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.0001,
+      "probability": 0.0001,
+      "missionTime": 24,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 880,
+        "y": 250
+      }
+    },
+    {
+      "id": "0f1fdfb9-8885-4b40-a621-7c4e27a8e118",
+      "name": "新規基事象_11",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.0001,
+      "probability": 0.0048000000000000004,
+      "missionTime": 48,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 400,
+        "y": 250
+      },
+      "eventId": "TEST1"
+    },
+    {
+      "id": "28b92623-8081-4c3a-a420-3835081bfcba",
+      "name": "新規基事象_12",
+      "eventType": "basicEvent",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0.00001,
+      "probability": 0.00024000000000000003,
+      "missionTime": 24,
+      "demands": 1,
+      "distribution": {
+        "type": "lognormal",
+        "mean": 0.0001,
+        "errorFactor": 3
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 640,
+        "y": 250
+      }
+    },
+    {
+      "id": "430968e5-4d9c-447d-8dcb-3341eef8dfc7",
+      "name": "トランスファ",
+      "eventType": "transferGate",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0,
+      "probability": 0,
+      "distribution": {
+        "type": "point",
+        "mean": 0
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 640,
+        "y": 250
+      },
+      "linkedFaultTreeId": "cd1d3f6f-51a9-40fa-84d8-e0dc1a776ab5"
+    },
+    {
+      "id": "3b4fcc8a-e540-47a3-915d-1f65693344ff",
+      "name": "トランスファ_2",
+      "eventType": "transferGate",
+      "tags": [],
+      "failureType": "time",
+      "failureRate": 0,
+      "probability": 0,
+      "distribution": {
+        "type": "point",
+        "mean": 0
+      },
+      "source": "",
+      "memo": "",
+      "position": {
+        "x": 520,
+        "y": 250
+      },
+      "linkedFaultTreeId": "dc2948b2-b736-4ab0-9e24-bad9cffa9fec"
+    }
+  ],
+  "houseEvents": [],
+  "ccfGroups": [
+    {
+      "id": "9f9884e9-3c95-4308-9665-73234788ba49",
+      "name": "新規CCFグループ",
+      "model": "beta_factor",
+      "members": [
+        "aabe8e8e-c240-474a-ab84-cf195ba9fc75"
+      ],
+      "parameters": {
+        "beta": 0.1
+      }
+    },
+    {
+      "id": "03e92620-1640-46cb-93d0-4d5a9d605b50",
+      "name": "新規CCFグループ2",
+      "model": "beta_factor",
+      "members": [
+        "8290b4d9-8ff4-40db-beae-118f074d48fe",
+        "29c3116a-c495-4087-9ca0-5eb2bec667ab",
+        "60dcf419-5457-41a6-8edd-6e974fa94a50",
+        "4ce351c0-2ba8-47d9-98f7-bfffde1cc594"
+      ],
+      "parameters": {
+        "beta": 0.1
+      }
+    }
+  ],
+  "initiatingEvents": [
+    {
+      "id": "898e9e47-586a-4132-ac5d-e88cdd2d7da9",
+      "name": "TEST p=1",
+      "frequency": 1,
+      "description": "小破断LOCA",
+      "code": "TEST",
+      "linkedFaultTreeId": ""
+    },
+    {
+      "id": "IE_1778255565935",
+      "name": "小LOCA",
+      "code": "SLOCA",
+      "frequency": 0.5,
+      "linkedFaultTreeId": ""
+    }
+  ],
+  "endStates": [
+    {
+      "id": "16647e4a-e88e-4680-9379-824529ea06cf",
+      "name": "OK",
+      "category": "success",
+      "description": "正常",
+      "color": "#00D68F",
+      "categories": [
+        "success"
+      ]
+    },
+    {
+      "id": "1b3d73da-bc82-4715-a610-54d83a8256c5",
+      "name": "TQUX",
+      "category": "core_damage",
+      "description": "過渡事象+給水喪失+高圧注入失敗+減圧失敗",
+      "color": "#FF4757",
+      "categories": [
+        "core_damage"
+      ]
+    },
+    {
+      "id": "89df86f8-f1ef-4425-8cbf-e90c58182d45",
+      "name": "TQUV",
+      "category": "core_damage",
+      "description": "過渡事象+給水喪失+高圧注入成功+格納容器冷却失敗",
+      "color": "#FF6B81",
+      "categories": [
+        "core_damage"
+      ]
+    },
+    {
+      "id": "4eca73ec-1c3f-4782-9432-099981b92367",
+      "name": "SBO-CD",
+      "category": "core_damage",
+      "description": "全電源喪失→炉心損傷",
+      "color": "#FFA502",
+      "categories": [
+        "core_damage"
+      ]
+    },
+    {
+      "id": "5191534a-77b3-445a-b754-3c07e16824fb",
+      "name": "RBR",
+      "categories": [
+        "大規模早期放出",
+        "core_damage"
+      ],
+      "color": "#FF4757"
+    },
+    {
+      "id": "a6bd0ca8-aa12-48f9-a692-e1b2e3443ae4",
+      "name": "TW",
+      "categories": [
+        "core_damage",
+        "大規模早期放出"
+      ],
+      "color": "#FF4757"
+    },
+    {
+      "id": "182706df-5681-4721-8c8c-99911fa5b71b",
+      "name": "暫定",
+      "categories": [
+        "core_damage"
+      ],
+      "color": "#FF4757"
+    }
+  ],
+  "parameters": [
+    {
+      "id": "79a2529c-dee4-4d7f-b402-5c9e3c17dea4",
+      "name": "ポンプ起動失敗",
+      "failureType": "demand",
+      "value": 0.001,
+      "source": "NUREGxxxx",
+      "description": ""
+    },
+    {
+      "id": "038628ae-6af9-41ee-945e-fedaf7776c86",
+      "name": "ポンプ継続運転失敗",
+      "failureType": "time",
+      "value": 0.0001,
+      "source": "NUREGxxxx",
+      "description": ""
+    }
+  ],
+  "seismicHazardCurves": [],
+  "seismicHazards": [
+    {
+      "id": "69b1ffb1-b462-45c0-ae0f-86e807bbfc01",
+      "name": "サイトA",
+      "fractiles": [
+        {
+          "id": "9ea5e07b-ba02-4821-b3cb-e145586d586a",
+          "name": "Mean",
+          "percentile": -1,
+          "points": [
+            {
+              "pga": 0.1,
+              "frequency": 0.001
+            },
+            {
+              "pga": 0.5,
+              "frequency": 0.0001
+            },
+            {
+              "pga": 1,
+              "frequency": 0.00001
+            }
+          ]
+        },
+        {
+          "id": "bacfb322-5a08-4c47-a2a2-1737f8661ef8",
+          "name": "50%",
+          "percentile": 0.5,
+          "points": [
+            {
+              "pga": 0.1,
+              "frequency": 0.001
+            },
+            {
+              "pga": 0.5,
+              "frequency": 0.0001
+            },
+            {
+              "pga": 1,
+              "frequency": 0.00001
+            }
+          ]
+        },
+        {
+          "id": "5ad4fc47-a552-4d32-9bf1-4aa0bb116953",
+          "name": "95%",
+          "percentile": 0.95,
+          "points": [
+            {
+              "pga": 0.1,
+              "frequency": 0.005
+            },
+            {
+              "pga": 0.5,
+              "frequency": 0.0005
+            },
+            {
+              "pga": 1,
+              "frequency": 0.00005
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dccedd97-39c7-4e6c-b578-9ec91e27a846",
+      "name": "サイトB",
+      "fractiles": [
+        {
+          "id": "c8f72139-46b5-4d94-942b-4a778ed90a27",
+          "name": "Mean",
+          "percentile": -1,
+          "points": [
+            {
+              "pga": 0,
+              "frequency": 1
+            },
+            {
+              "pga": 0.1,
+              "frequency": 0.1
+            },
+            {
+              "pga": 0.5,
+              "frequency": 0.01
+            },
+            {
+              "pga": 1,
+              "frequency": 0.001
+            },
+            {
+              "pga": 1.5,
+              "frequency": 0.0001
+            },
+            {
+              "pga": 2,
+              "frequency": 0.00001
+            }
+          ]
+        },
+        {
+          "id": "c272507e-2610-4240-9fc2-30b027c6459a",
+          "name": "5%",
+          "percentile": 0.5,
+          "points": [
+            {
+              "pga": 0,
+              "frequency": 1
+            },
+            {
+              "pga": 0.1,
+              "frequency": 0.1
+            },
+            {
+              "pga": 0.5,
+              "frequency": 0.01
+            },
+            {
+              "pga": 1,
+              "frequency": 0.001
+            },
+            {
+              "pga": 1.5,
+              "frequency": 0.0001
+            },
+            {
+              "pga": 2,
+              "frequency": 0.00001
+            }
+          ]
+        },
+        {
+          "id": "99a3b632-c598-4811-84bb-00a54b727ccc",
+          "name": "50%",
+          "percentile": 0.5,
+          "points": [
+            {
+              "pga": 0,
+              "frequency": 1
+            },
+            {
+              "pga": 0.1,
+              "frequency": 0.1
+            },
+            {
+              "pga": 0.5,
+              "frequency": 0.01
+            },
+            {
+              "pga": 1,
+              "frequency": 0.001
+            },
+            {
+              "pga": 1.5,
+              "frequency": 0.0001
+            },
+            {
+              "pga": 2,
+              "frequency": 0.00001
+            }
+          ]
+        },
+        {
+          "id": "7470bcb1-4119-4c2a-9f1b-0f9604773721",
+          "name": "95%",
+          "percentile": 0.5,
+          "points": [
+            {
+              "pga": 0,
+              "frequency": 1
+            },
+            {
+              "pga": 0.1,
+              "frequency": 0.1
+            },
+            {
+              "pga": 0.5,
+              "frequency": 0.01
+            },
+            {
+              "pga": 1,
+              "frequency": 0.001
+            },
+            {
+              "pga": 1.5,
+              "frequency": 0.0001
+            },
+            {
+              "pga": 2,
+              "frequency": 0.00001
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "6dea5736-85b6-4a6e-a729-d0d5d417f45e",
+      "name": "新しいハザード曲線",
+      "fractiles": [
+        {
+          "id": "4552ca00-d8c8-4ebd-ba5d-be9c3f293350",
+          "name": "Mean",
+          "percentile": -1,
+          "points": [
+            {
+              "pga": 0.1,
+              "frequency": 0.001
+            },
+            {
+              "pga": 0.5,
+              "frequency": 0.0001
+            },
+            {
+              "pga": 1,
+              "frequency": 0.00001
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "seismicFragilities": [
+    {
+      "id": "0a28cd4b-490a-41cb-8773-7426a5ac8122",
+      "name": "ポンプ",
+      "am": 1.1,
+      "betaR": 0.2,
+      "betaU": 0.2,
+      "type": "lognormal",
+      "points": [
+        {
+          "pga": 0.1,
+          "probability": 0.1
+        },
+        {
+          "pga": 0.5,
+          "probability": 0.5
+        },
+        {
+          "pga": 1,
+          "probability": 0.9
+        }
+      ]
+    },
+    {
+      "id": "d21dff14-2252-4a37-b98d-3fe5a5fd026b",
+      "name": "手動弁A",
+      "am": 2,
+      "betaR": 0.2,
+      "betaU": 0.3,
+      "type": "lognormal",
+      "points": []
+    },
+    {
+      "id": "0125d52e-688a-490d-b04a-8be952af8f97",
+      "name": "離散値フラジリティ",
+      "type": "discrete",
+      "am": 1,
+      "betaR": 0.2,
+      "betaU": 0.2,
+      "points": [
+        {
+          "pga": 0,
+          "probability": 0
+        },
+        {
+          "pga": 1,
+          "probability": 0.01
+        },
+        {
+          "pga": 1.001,
+          "probability": 1
+        },
+        {
+          "pga": 2,
+          "probability": 1
+        }
+      ]
+    }
+  ],
+  "seismicSettings": {
+    "hazardCurveId": "dccedd97-39c7-4e6c-b578-9ec91e27a846",
+    "minPGA": 0.05,
+    "maxPGA": 2,
+    "intervals": 20,
+    "selectedETIds": [
+      "d0654510-8e04-4d58-a673-1e7cd95950c5",
+      "315210c7-324f-4a5c-93b5-ca6b04376d42"
+    ],
+    "uncertaintyEnabled": true
+  },
+  "quantificationSettings": {
+    "cutOff": 1e-20,
+    "approximation": "bdd_exact",
+    "monteCarloSamples": 10000,
+    "useLHS": true,
+    "runUncertainty": true
+  }
+};
 }
 
 // ===== Store Interface =====
@@ -1008,7 +1397,6 @@ export const useModelStore = create<ModelState>((set, get) => ({
   isDirty: false,
   past: [],
   future: [],
-
   setModel: (model) => {
     const updatedModel = { ...model };
     if (updatedModel.quantificationSettings) {
@@ -1018,16 +1406,27 @@ export const useModelStore = create<ModelState>((set, get) => ({
           cutOff: 1e-20
         };
       }
+      if (updatedModel.quantificationSettings.maxCutsets === undefined) {
+        updatedModel.quantificationSettings.maxCutsets = 3000;
+      }
     } else {
       updatedModel.quantificationSettings = {
         cutOff: 1e-20,
         approximation: 'bdd_exact',
         monteCarloSamples: 10000,
         useLHS: true,
-        runUncertainty: false
+        runUncertainty: false,
+        maxCutsets: 3000
       };
     }
-    set({ model: updatedModel, isDirty: false, past: [], future: [] });
+    set({ 
+      model: updatedModel, 
+      isDirty: false, 
+      past: [], 
+      future: [],
+      selectedFaultTreeId: updatedModel.faultTrees?.[0]?.id ?? null,
+      selectedEventTreeId: updatedModel.eventTrees?.[0]?.id ?? null
+    });
   },
 
   selectFaultTree: (id) => set({ selectedFaultTreeId: id }),

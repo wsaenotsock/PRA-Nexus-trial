@@ -15,12 +15,32 @@ function cleanResult(res: QuantificationResult): any {
   return cleaned;
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+function addCorsHeaders(response: NextResponse) {
+  Object.entries(corsHeaders).forEach(([key, value]) => {
+    response.headers.set(key, value);
+  });
+  return response;
+}
+
+export async function OPTIONS(request: Request) {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const { type, payload } = await request.json();
 
     if (!type) {
-      return NextResponse.json({ error: 'Missing calculation type' }, { status: 400 });
+      return addCorsHeaders(NextResponse.json({ error: 'Missing calculation type' }, { status: 400 }));
     }
 
     console.log(`[Server API] Processing calculation: ${type}`);
@@ -32,16 +52,20 @@ export async function POST(request: Request) {
         const ft = (model.faultTrees || []).find((f: any) => f.id === targetId);
         if (!ft) throw new Error(`Fault Tree not found: ${targetId}`);
 
+        const cutoffValue = model.quantificationSettings?.cutOff ?? 1e-15;
+        const maxCutsetsValue = model.quantificationSettings?.maxCutsets ?? 3000;
         const res = quantifyFaultTree(
           ft,
           model.basicEvents || [],
           model.parameters || [],
           model.ccfGroups || [],
-          model.faultTrees || []
+          model.faultTrees || [],
+          cutoffValue,
+          maxCutsetsValue
         );
-        res.cutoff = model.quantificationSettings?.cutOff;
+        res.cutoff = cutoffValue;
         const finalRes = { ...res, isFaultTree: true, targetId } as any;
-        return NextResponse.json({ result: cleanResult(finalRes) });
+        return addCorsHeaders(NextResponse.json({ result: cleanResult(finalRes) }));
       }
 
       case 'QUANTIFY_ET': {
@@ -53,14 +77,14 @@ export async function POST(request: Request) {
         const res = quantifyEventTree(et, model);
         res.cutoff = model.quantificationSettings?.cutOff;
         const finalRes = { ...res, isFaultTree: false, targetId } as any;
-        return NextResponse.json({ result: cleanResult(finalRes) });
+        return addCorsHeaders(NextResponse.json({ result: cleanResult(finalRes) }));
       }
 
       case 'QUANTIFY_SEISMIC': {
         const { model } = payload;
         if (!model) throw new Error('Model is missing in payload');
         const res = quantifySeismic('', model);
-        return NextResponse.json({ result: cleanResult(res) });
+        return addCorsHeaders(NextResponse.json({ result: cleanResult(res) }));
       }
 
       case 'RUN_MONTE_CARLO': {
@@ -82,7 +106,9 @@ export async function POST(request: Request) {
             model.basicEvents || [],
             model.parameters || [],
             model.ccfGroups || [],
-            model.faultTrees || []
+            model.faultTrees || [],
+            model.quantificationSettings?.cutOff ?? 1e-15,
+            model.quantificationSettings?.maxCutsets ?? 3000
           );
         } else {
           const et = (model.eventTrees || []).find((e: any) => e.id === currentResult.targetId);
@@ -125,11 +151,11 @@ export async function POST(request: Request) {
         }
 
         if (targetBDD === FALSE_NODE && targetType !== 'total') {
-          return NextResponse.json({ result: null });
+          return addCorsHeaders(NextResponse.json({ result: null }));
         }
 
         const mcRes = runMonteCarlo(targetBDD, model, undefined, trials, useLHS, fullResult.baseProbabilities);
-        return NextResponse.json({ result: mcRes });
+        return addCorsHeaders(NextResponse.json({ result: mcRes }));
       }
 
       case 'RUN_SENSITIVITY': {
@@ -146,7 +172,9 @@ export async function POST(request: Request) {
             model.basicEvents || [],
             model.parameters || [],
             model.ccfGroups || [],
-            model.faultTrees || []
+            model.faultTrees || [],
+            model.quantificationSettings?.cutOff ?? 1e-15,
+            model.quantificationSettings?.maxCutsets ?? 3000
           );
         } else {
           const et = (model.eventTrees || []).find((e: any) => e.id === currentResult.targetId);
@@ -158,14 +186,14 @@ export async function POST(request: Request) {
         }
 
         const sRes = calculateSensitivity(fullResult.totalRiskBDD, fullResult.baseProbabilities, targetEvents, options);
-        return NextResponse.json({ result: sRes });
+        return addCorsHeaders(NextResponse.json({ result: sRes }));
       }
 
       default:
-        return NextResponse.json({ error: `Unknown calculation type: ${type}` }, { status: 400 });
+        return addCorsHeaders(NextResponse.json({ error: `Unknown calculation type: ${type}` }, { status: 400 }));
     }
   } catch (error: any) {
     console.error(`[Server API Error]: ${error.message}`);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return addCorsHeaders(NextResponse.json({ error: error.message }, { status: 500 }));
   }
 }
