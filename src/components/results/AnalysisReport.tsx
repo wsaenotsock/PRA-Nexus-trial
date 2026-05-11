@@ -3,6 +3,7 @@
 import React from 'react';
 import { useResultsStore } from '@/store/resultsStore';
 import { useModelStore } from '@/store/modelStore';
+import { formatDuration } from '@/lib/utils/format';
 
 export interface ReportOptions {
   showExecSummary: boolean;
@@ -193,7 +194,7 @@ export default function AnalysisReport({
             <div style={{ fontSize: '12px', color: '#666', background: '#fff', border: '1px solid #eee', padding: '10px', borderRadius: '6px' }}>
               <strong>{locale === 'ja' ? 'カットオフ設定' : 'Cut-off Threshold'}:</strong> {result.cutoff?.toExponential(1) || 'None'}
               <span style={{ marginLeft: '20px' }}>
-                <strong>{locale === 'ja' ? '計算時間' : 'Compute Time'}:</strong> {result.computeTimeMs.toFixed(1)} ms
+                <strong>{locale === 'ja' ? '計算時間' : 'Compute Time'}:</strong> {formatDuration(result.computeTimeMs)}
               </span>
             </div>
           </section>

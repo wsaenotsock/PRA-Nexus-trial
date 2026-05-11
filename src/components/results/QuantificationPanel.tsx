@@ -18,9 +18,24 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
     monteCarloSamples: 10000,
     useLHS: true,
     runUncertainty: false,
-    maxCutsets: 3000
+    maxCutsets: 100000
   };
   const updateSettings = useModelStore(s => s.updateQuantificationSettings);
+  
+  // Ensure settings.approximation is treated as an array safely
+  const currentMethods: string[] = React.useMemo(() => {
+    const raw = settings.approximation;
+    if (Array.isArray(raw)) return raw;
+    return raw ? [raw] : ['bdd_exact'];
+  }, [settings.approximation]);
+
+  const handleToggleMethod = (method: string) => {
+    const next = currentMethods.includes(method)
+      ? currentMethods.filter(m => m !== method)
+      : [...currentMethods, method];
+    // Keep at least one method? Or allow none? Let's allow none, but usually at least BDD is chosen.
+    updateSettings({ ...settings, approximation: next as any });
+  };
   
   const [cutOffInput, setCutOffInput] = React.useState(settings.cutOff.toString());
 
@@ -95,8 +110,22 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
     approximation: locale === 'ja' ? '計算手法' : 'Calculation Method',
     maxCutsets: locale === 'ja' ? '最大カットセット数 (打ち切り値)' : 'Max Cutsets Limit',
     cutoffTip: locale === 'ja' 
-      ? '💡 ヒント: カットオフ値を下げすぎると（例: 1e-40）、極小確率のカットセットだけで打ち切り上限に達してしまい、本来の支配的なカットセットが計算されなくなって近似値が急激に小さくなる現象が発生します。基本事象の確率スケールに合わせた適切な値（例: 1e-15〜1e-20）を設定してください。' 
-      : '💡 Tip: Setting the cut-off threshold too low (e.g., 1e-40) can cause the truncation limit to be filled entirely with negligible cutsets, preventing dominant cutsets from being calculated and artificially decreasing the approximation value. Choose a threshold appropriate to your events (e.g., 1e-15 to 1e-20).',
+      ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div>💡 <strong>カットオフの注意点:</strong> 設定値を下げすぎると（例: 1e-40）、探索木が膨大になり極小確率の経路だけで「最大カットセット数」の枠を使い切ってしまいます。その結果、本来の支配的な組み合わせが抽出されなくなるため、近似値が急落する原因となります。</div>
+          <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: '6px' }}>
+            💡 <strong>最大数と抽出数の差異:</strong> 最大数（打ち切り値）を大きく設定しても、最終的な「総MCS数」がそれより少なくなることがあります。これは抽出過程で他の短い組み合わせに包含（吸収）され、極小カットセットとして整理・削減されるためです。
+          </div>
+        </div>
+      )
+      : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div>💡 <strong>Cut-off Caveat:</strong> Setting the threshold too low (e.g., 1e-40) can flood the extraction limit with negligible paths, locking out dominant combinations and causing computed probabilities to drop.</div>
+          <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: '6px' }}>
+            💡 <strong>Discrepancy in Counts:</strong> The final MCS count may be lower than the specified "Max Cutsets". This is because redundant combinations are absorbed by smaller subsets during the minimization process.
+          </div>
+        </div>
+      ),
     mcSamples: locale === 'ja' ? 'モンテカルロ試行回数' : 'Monte Carlo Samples',
     useLHS: locale === 'ja' ? 'LHS (Latin Hypercube Sampling) を使用' : 'Use Latin Hypercube Sampling (LHS)',
     runFT: locale === 'ja' ? 'FT定量化実行' : 'Run FT Quantification',
@@ -107,6 +136,8 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
     runUncertaintyLabel: locale === 'ja' ? '定量化後に不確かさ解析（モンテカルロ法）を実行する' : 'Run Uncertainty Analysis (Monte Carlo) after quantification',
     selectAll: locale === 'ja' ? 'すべて選択' : 'Select All',
     deselectAll: locale === 'ja' ? '選択解除' : 'Deselect',
+    groupExact: locale === 'ja' ? '厳密評価 (Exact)' : 'Exact Evaluation',
+    groupApprox: locale === 'ja' ? '近似評価 & カットセット設定 (Approx & MCS)' : 'Approximations & Cutsets',
   };
 
   const renderTargetItem = (target: any, isFT: boolean) => {
@@ -186,7 +217,7 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
   };
 
   return (
-    <div className="quantification-panel" style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
+    <div className="quantification-panel" style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
       <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>⚙️ {t.title}</h2>
@@ -202,55 +233,113 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
         </button>
       </header>
 
-      <div style={{ display: 'grid', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px', alignItems: 'start' }}>
+        {/* Left Column: All Configuration Sections */}
+        <div style={{ display: 'grid', gap: '24px' }}>
         <section className="card" style={{ padding: '20px', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-default)' }}>
           <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>📊</span> {locale === 'ja' ? '基本設定' : 'Basic Settings'}
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
-            <div className="form-group">
-              <label className="form-label">{t.cutOff}</label>
-              <input 
-                type="text" 
-                className="form-input" 
-                value={cutOffInput} 
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setCutOffInput(val);
-                  const parsed = parseFloat(val);
-                  if (!isNaN(parsed) && parsed >= 0) {
-                    handleChange('cutOff', parsed);
-                  }
-                }}
-                onBlur={() => {
-                  setCutOffInput(settings.cutOff.toExponential());
-                }}
-                placeholder="例: 1e-15"
-              />
+          <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: '16px' }}>
+            {/* Left Group: Exact Logic (Completely independent of cutsets) */}
+            <div style={{ 
+              background: 'rgba(59, 130, 246, 0.04)', 
+              border: '1px solid rgba(59, 130, 246, 0.2)', 
+              borderRadius: '8px', 
+              padding: '16px',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent-blue)', marginBottom: '12px', borderBottom: '1px solid rgba(59, 130, 246, 0.1)', paddingBottom: '6px' }}>
+                🛡️ {t.groupExact}
+              </div>
+              <div className="form-group" style={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>
+                  <input 
+                    type="checkbox" 
+                    checked={currentMethods.includes('bdd_exact')} 
+                    onChange={() => handleToggleMethod('bdd_exact')} 
+                    style={{ width: '18px', height: '18px' }}
+                  />
+                  <span>{locale === 'ja' ? 'BDD (厳密解)' : 'BDD (Exact)'}</span>
+                </label>
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px', fontStyle: 'italic' }}>
+                {locale === 'ja' ? '※カットオフの影響を受けません' : '* Unaffected by cut-off'}
+              </div>
             </div>
-            <div className="form-group">
-              <label className="form-label">{t.approximation}</label>
-              <select className="form-select" value={settings.approximation} onChange={(e) => handleChange('approximation', e.target.value)}>
-                <option value="bdd_exact">{locale === 'ja' ? 'BDD (厳密解)' : 'BDD (Exact)'}</option>
-                <option value="rare_event">{locale === 'ja' ? '稀事象近似' : 'Rare Event Approx'}</option>
-                <option value="mcupb">{locale === 'ja' ? 'MCUPB (Min Cut Upper Bound)' : 'MCUPB'}</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">{t.maxCutsets}</label>
-              <input 
-                type="number" 
-                className="form-input" 
-                value={settings.maxCutsets ?? 3000} 
-                onChange={(e) => {
-                  const val = parseInt(e.target.value);
-                  if (!isNaN(val) && val > 0) {
-                    handleChange('maxCutsets', val);
-                  }
-                }}
-                min={1}
-                placeholder="例: 3000"
-              />
+
+            {/* Right Group: Approximation Logic & Cutset Extraction (Highly coupled) */}
+            <div style={{ 
+              background: 'rgba(255,255,255,0.02)', 
+              border: '1px solid var(--border-default)', 
+              borderRadius: '8px', 
+              padding: '16px' 
+            }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '6px' }}>
+                ✂️ {t.groupApprox}
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                {/* Approximation Selections */}
+                <div className="form-group">
+                  <label className="form-label" style={{ marginBottom: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    {locale === 'ja' ? '近似手法の選択' : 'Approximation Methods'}
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                      <input type="checkbox" checked={currentMethods.includes('rare_event')} onChange={() => handleToggleMethod('rare_event')} />
+                      <span>{locale === 'ja' ? '稀事象近似' : 'Rare Event Approx'}</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                      <input type="checkbox" checked={currentMethods.includes('mcub')} onChange={() => handleToggleMethod('mcub')} />
+                      <span>{locale === 'ja' ? 'MCUB' : 'MCUB'}</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Cutset Tuning Parameters */}
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  <div className="form-group">
+                    <label className="form-label" style={{ marginBottom: '4px', fontSize: '13px' }}>{t.cutOff}</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      value={cutOffInput} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCutOffInput(val);
+                        const parsed = parseFloat(val);
+                        if (!isNaN(parsed) && parsed >= 0) {
+                          handleChange('cutOff', parsed);
+                        }
+                      }}
+                      onBlur={() => {
+                        setCutOffInput(settings.cutOff.toExponential());
+                      }}
+                      placeholder="例: 1e-15"
+                      style={{ padding: '6px 10px', height: 'auto', fontSize: '13px' }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label" style={{ marginBottom: '4px', fontSize: '13px' }}>{t.maxCutsets}</label>
+                    <input 
+                      type="number" 
+                      className="form-input" 
+                      value={settings.maxCutsets ?? 100000} 
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val) && val > 0) {
+                          handleChange('maxCutsets', val);
+                        }
+                      }}
+                      min={1}
+                      placeholder="例: 100000"
+                      style={{ padding: '6px 10px', height: 'auto', fontSize: '13px' }}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <div style={{ 
@@ -286,9 +375,13 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
             </label>
           </div>
         </section>
+        </div>
 
-        {/* Targets List Section */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        {/* Right Column: Targets List Section (Stacked Vertically) */}
+        <div style={{ display: 'grid', gap: '20px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 600, margin: '0 0 -8px 4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>🎯</span> {t.targetList}
+          </h3>
           {/* Fault Trees Section */}
           <section className="card" style={{ padding: '20px', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-default)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>

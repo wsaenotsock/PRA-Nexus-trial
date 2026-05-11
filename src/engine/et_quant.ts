@@ -14,7 +14,9 @@ import {
   calculateImportanceMeasures,
   resetBDD,
   makeBDDNode,
-  getVariableOrder
+  getVariableOrder,
+  rareEventApprox,
+  mcubApprox
 } from './bdd';
 
 /**
@@ -22,7 +24,8 @@ import {
  */
 export function quantifyEventTree(
   et: EventTree,
-  model: PRAModel
+  model: PRAModel,
+  method: 'bdd_exact' | 'rare_event' | 'mcub' = 'bdd_exact'
 ): QuantificationResult {
   const startTime = performance.now();
 
@@ -270,9 +273,13 @@ export function quantifyEventTree(
 
   const computeTimeMs = performance.now() - startTime;
 
+  const topEventProbabilityApprox = method === 'mcub'
+    ? mcubApprox(cutSets)
+    : rareEventApprox(cutSets);
+
   return {
     topEventProbability: totalNonSuccessFreq,
-    topEventProbabilityApprox: 0,
+    topEventProbabilityApprox: topEventProbabilityApprox,
     cutSets,
     importanceMeasures,
     totalCDF: totalNonSuccessFreq,
@@ -281,7 +288,7 @@ export function quantifyEventTree(
     endStateResults,
     sequenceResults,
     computeTimeMs,
-    method: 'bdd_exact',
+    method: method,
     baseProbabilities: Object.fromEntries(probabilities)
   };
 }

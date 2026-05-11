@@ -275,7 +275,7 @@ export function extractMCS(
   allPaths: string[][] = [],
   currentProb: number = 1.0,
   cutoff: number = 1e-15,
-  maxCount: number = 3000
+  maxCount: number = 100000
 ): string[][] {
   if (allPaths.length >= maxCount) return allPaths; // 最大件数に達したら打ち切り
 
@@ -370,12 +370,21 @@ export function calculateImportanceMeasures(
 }
 
 // ===== Rare Event Approximation =====
-function rareEventApprox(cutSets: CutSet[]): number {
+export function rareEventApprox(cutSets: CutSet[]): number {
   let total = 0;
   for (const cs of cutSets) {
     total += cs.probability;
   }
   return Math.min(total, 1);
+}
+
+// ===== MCUB Approximation =====
+export function mcubApprox(cutSets: CutSet[]): number {
+  let product = 1;
+  for (const cs of cutSets) {
+    product *= (1 - Math.min(cs.probability, 1));
+  }
+  return 1 - product;
 }
 
 // ===== Variable Ordering (DFS heuristic) =====
@@ -552,7 +561,8 @@ export function quantifyFaultTree(
   ccfGroups: CCFGroup[] = [],
   allFaultTrees: FaultTree[] = [],
   cutoff: number = 1e-15,
-  maxCutsets: number = 3000
+  maxCutsets: number = 100000,
+  method: 'bdd_exact' | 'rare_event' | 'mcub' = 'bdd_exact'
 ): QuantificationResult {
   const startTime = performance.now();
 
@@ -744,8 +754,10 @@ export function quantifyFaultTree(
     };
   }).sort((a, b) => b.probability - a.probability);
 
-  // Rare event approximation for comparison
-  const topEventProbabilityApprox = rareEventApprox(cutSets);
+  // Calculate approximation based on selected method or defaults
+  const topEventProbabilityApprox = method === 'mcub' 
+    ? mcubApprox(cutSets) 
+    : rareEventApprox(cutSets);
 
   // Calculate importance measures
   const importanceMeasures = calculateImportanceMeasures(
@@ -764,7 +776,7 @@ export function quantifyFaultTree(
     importanceMeasures,
     totalRiskBDD: bddRoot, // Added for Monte Carlo
     computeTimeMs,
-    method: 'bdd_exact',
+    method: method,
     baseProbabilities: Object.fromEntries(probabilities),
   };
 }
