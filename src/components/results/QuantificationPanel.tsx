@@ -13,8 +13,9 @@ interface QuantificationPanelProps {
 export default function QuantificationPanel({ locale, onNavigateToResults }: QuantificationPanelProps) {
   const model = useModelStore(s => s.model);
   const settings = model.quantificationSettings || {
-    cutOff: 1e-20,
-    approximation: 'bdd_exact',
+    cutOff: 1e-10,
+    bddCutOff: 1e-10,
+    approximation: ['bdd_exact', 'mcub', 'rare_event'],
     monteCarloSamples: 10000,
     useLHS: true,
     runUncertainty: false,
@@ -38,10 +39,15 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
   };
   
   const [cutOffInput, setCutOffInput] = React.useState(settings.cutOff.toString());
+  const [bddCutOffInput, setBddCutOffInput] = React.useState((settings.bddCutOff ?? 1e-10).toString());
 
   React.useEffect(() => {
     setCutOffInput(settings.cutOff.toExponential());
   }, [settings.cutOff]);
+
+  React.useEffect(() => {
+    setBddCutOffInput((settings.bddCutOff ?? settings.cutOff ?? 1e-10).toExponential());
+  }, [settings.bddCutOff, settings.cutOff]);
   
   const results = useResultsStore(s => s.results || {});
   const activeResultId = useResultsStore(s => s.activeResultId);
@@ -106,7 +112,8 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
 
   const t = {
     title: locale === 'ja' ? '定量化設定' : 'Quantification Settings',
-    cutOff: locale === 'ja' ? 'カットオフ値 (下限確率)' : 'Cut-off Threshold',
+    cutOff: locale === 'ja' ? 'カットセット抽出下限 (Cut-off)' : 'Cut-off Threshold',
+    bddCutOff: locale === 'ja' ? '枝刈り閾値 (Pruning)' : 'Pruning Threshold',
     approximation: locale === 'ja' ? '計算手法' : 'Calculation Method',
     maxCutsets: locale === 'ja' ? '最大カットセット数 (打ち切り値)' : 'Max Cutsets Limit',
     cutoffTip: locale === 'ja' 
@@ -253,8 +260,8 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
               <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent-blue)', marginBottom: '12px', borderBottom: '1px solid rgba(59, 130, 246, 0.1)', paddingBottom: '6px' }}>
                 🛡️ {t.groupExact}
               </div>
-              <div className="form-group" style={{ flexGrow: 1, display: 'flex', alignItems: 'center' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: 600 }}>
+              <div className="form-group" style={{ marginTop: '8px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>
                   <input 
                     type="checkbox" 
                     checked={currentMethods.includes('bdd_exact')} 
@@ -263,9 +270,35 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
                   />
                   <span>{locale === 'ja' ? 'BDD (厳密解)' : 'BDD (Exact)'}</span>
                 </label>
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px', fontStyle: 'italic' }}>
-                {locale === 'ja' ? '※カットオフの影響を受けません' : '* Unaffected by cut-off'}
+                
+                {currentMethods.includes('bdd_exact') && (
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
+                    <label className="form-label" style={{ marginBottom: '4px', fontSize: '12px', color: 'var(--text-secondary)' }}>{t.bddCutOff}</label>
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      value={bddCutOffInput} 
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setBddCutOffInput(val);
+                        const parsed = parseFloat(val);
+                        if (!isNaN(parsed) && parsed >= 0) {
+                          handleChange('bddCutOff', parsed);
+                        }
+                      }}
+                      onBlur={() => {
+                        setBddCutOffInput((settings.bddCutOff ?? 1e-10).toExponential());
+                      }}
+                      placeholder="例: 1e-12"
+                      style={{ padding: '6px 10px', height: 'auto', fontSize: '13px', border: '1px solid var(--accent-blue)' }}
+                    />
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px', opacity: 0.9, lineHeight: 1.4 }}>
+                      {locale === 'ja' 
+                        ? '※確率上限がこの閾値未満と判定された論理パスの展開をBDD構築時点で打ち切り、計算速度を大幅に向上させます。通常、カットセット抽出下限と同等か、それ以下の値に設定します。' 
+                        : '* Discards logical subtree expansion during BDD synthesis when the upper bound probability falls below this value. Dramatically boosts performance for large models.'}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -297,6 +330,7 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
                     </label>
                   </div>
                 </div>
+
 
                 {/* Cutset Tuning Parameters */}
                 <div style={{ display: 'grid', gap: '12px' }}>
@@ -382,6 +416,38 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
           <h3 style={{ fontSize: '16px', fontWeight: 600, margin: '0 0 -8px 4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>🎯</span> {t.targetList}
           </h3>
+
+          {/* Total Aggregated View Card */}
+          {Object.keys(results).length > 1 && (
+            <section className="card" style={{ 
+              padding: '16px 20px', 
+              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05), var(--bg-secondary))', 
+              borderRadius: '12px', 
+              border: `2px solid ${activeResultId === '__total_aggregated__' ? 'var(--accent-blue)' : 'var(--border-default)'}`, 
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)' 
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '15px', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>📊</span> {locale === 'ja' ? '全解析結果の統合' : 'Consolidated Total Results'}
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    {locale === 'ja' ? `${Object.keys(results).length}件の解析結果を合成して表示します。` : `Aggregating all ${Object.keys(results).length} active results.`}
+                  </div>
+                </div>
+                <button 
+                  className={`btn btn--sm ${activeResultId === '__total_aggregated__' ? 'btn--primary' : 'btn--secondary'}`}
+                  style={{ padding: '8px 16px', fontWeight: 600 }}
+                  onClick={() => {
+                    setActiveResult('__total_aggregated__');
+                    onNavigateToResults?.();
+                  }}
+                >
+                  {locale === 'ja' ? '統合ビューを開く' : 'Open Aggregated View'}
+                </button>
+              </div>
+            </section>
+          )}
           {/* Fault Trees Section */}
           <section className="card" style={{ padding: '20px', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-default)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>

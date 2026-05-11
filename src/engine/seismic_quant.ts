@@ -90,15 +90,16 @@ function getHazardFrequency(pga: number, hazard: SeismicHazardCurve): number {
   return points[0].frequency;
 }
 
-function buildETUndesirableBDD(et: EventTree, model: PRAModel): BDDNode {
+function buildETUndesirableBDD(et: EventTree, model: PRAModel, globalVariableOrder: string[]): BDDNode {
   const ie = model.initiatingEvents?.find(i => i.id === et.initiatingEventId);
   const ftBDDCache = new Map<string, BDDNode>();
   const getFTBDD = (ftId: string): BDDNode => {
     if (ftBDDCache.has(ftId)) return ftBDDCache.get(ftId)!;
     const ft = model.faultTrees.find(f => f.id === ftId);
     if (!ft) return FALSE_NODE;
-    const vOrder = getVariableOrder(ft.topGateId, ft.gates, model.basicEvents);
-    const bdd = buildBDD(ft.topGateId, ft.gates, model.basicEvents, vOrder);
+    
+    // Use consistent global variable ordering to prevent BDD structure collisions!
+    const bdd = buildBDD(ft.topGateId, ft.gates, model.basicEvents, globalVariableOrder, model.faultTrees);
     ftBDDCache.set(ftId, bdd);
     return bdd;
   };
@@ -148,10 +149,28 @@ export function quantifySeismic(dummyId: string, model: PRAModel): Quantificatio
   const selectedETs = model.eventTrees.filter(et => settings.selectedETIds.includes(et.id));
   if (selectedETs.length === 0) throw new Error('No Event Trees selected');
 
+  // Pre-compute one Global Variable Order covering ALL referenced FTs in ALL selected ETs
+  const allReferencedFTIds = new Set<string>();
+  for (const et of selectedETs) {
+    const ie = model.initiatingEvents?.find(i => i.id === et.initiatingEventId);
+    if (ie && ie.linkedFaultTreeId) allReferencedFTIds.add(ie.linkedFaultTreeId);
+    et.functionalEvents.forEach(fe => {
+      if (fe.linkedFaultTreeId) allReferencedFTIds.add(fe.linkedFaultTreeId);
+    });
+  }
+
+  const allTopGateIds: string[] = [];
+  allReferencedFTIds.forEach(ftId => {
+    const ft = model.faultTrees.find(f => f.id === ftId);
+    if (ft && ft.topGateId) allTopGateIds.push(ft.topGateId);
+  });
+
+  const globalVariableOrder = getVariableOrder(allTopGateIds, [], model.basicEvents, model.faultTrees);
+
   resetBDD();
   let totalRiskBDD = FALSE_NODE;
   for (const et of selectedETs) {
-    totalRiskBDD = bddOr(totalRiskBDD, buildETUndesirableBDD(et, model));
+    totalRiskBDD = bddOr(totalRiskBDD, buildETUndesirableBDD(et, model, globalVariableOrder));
   }
 
   // Determine if uncertainty analysis is requested

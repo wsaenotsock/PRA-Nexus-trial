@@ -82,6 +82,7 @@ export interface EndState {
   id: string;
   name: string;
   categories: string[];
+  category?: string; // Optional support for single category string mapping
   description?: string;
   color?: string;
   groupKey?: string;
@@ -193,6 +194,7 @@ export interface SeismicSettings {
 
 export interface GlobalQuantificationSettings {
   cutOff: number;
+  bddCutOff: number;
   approximation: ('bdd_exact' | 'rare_event' | 'mcub')[];
   monteCarloSamples: number;
   useLHS: boolean;
