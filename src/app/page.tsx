@@ -19,7 +19,7 @@ import ProjectManager from '@/components/project/ProjectManager';
 import type { NavigationTarget } from '@/lib/types/project';
 import { useModelStore } from '@/store/modelStore';
 import { useProjectStore } from '@/store/projectStore';
-import { useResultsStore, runWorkerCommand } from '@/store/resultsStore';
+import { useResultsStore, runWorkerCommand, abortComputation } from '@/store/resultsStore';
 import { useYjsStore } from '@/store/yjsStore';
 
 import ValidationPanel from '@/components/editor/ValidationPanel';
@@ -545,9 +545,35 @@ export default function Home() {
             {locale === 'ja' ? '静的PRA解析' : 'Static PRA Analysis'}
           </span>
           {isComputing && (
-            <div className="computing-indicator">
-              <div className="spinner-dot" />
-              {locale === 'ja' ? '計算中...' : 'Calculating...'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="computing-indicator">
+                <div className="spinner-dot" />
+                {locale === 'ja' ? '計算中...' : 'Calculating...'}
+              </div>
+              <button 
+                onClick={() => {
+                  if (window.confirm(locale === 'ja' ? '計算を中断しますか？' : 'Abort calculation?')) {
+                    abortComputation();
+                  }
+                }}
+                className="btn btn-ghost"
+                style={{ 
+                  height: '24px', 
+                  padding: '0 10px', 
+                  fontSize: '11px', 
+                  color: 'var(--accent-red)', 
+                  borderColor: 'rgba(239, 68, 68, 0.3)',
+                  background: 'rgba(239, 68, 68, 0.05)',
+                  borderRadius: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                title={locale === 'ja' ? '計算中断' : 'Cancel Calculation'}
+              >
+                <span style={{ fontSize: '14px' }}>🛑</span>
+                {locale === 'ja' ? '計算中断' : 'Abort'}
+              </button>
             </div>
           )}
         </div>

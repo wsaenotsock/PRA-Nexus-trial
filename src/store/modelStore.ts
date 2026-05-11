@@ -1317,11 +1317,13 @@ function createDefaultModel(): PRAModel {
     "uncertaintyEnabled": true
   },
   "quantificationSettings": {
-    "cutOff": 1e-20,
-    "approximation": "bdd_exact",
+    "cutOff": 1e-10,
+    "bddCutOff": 1e-10,
+    "approximation": ["bdd_exact", "mcub", "rare_event"],
     "monteCarloSamples": 10000,
     "useLHS": true,
-    "runUncertainty": true
+    "runUncertainty": false,
+    "maxCutsets": 100000
   }
 };
 }
@@ -1400,19 +1402,33 @@ export const useModelStore = create<ModelState>((set, get) => ({
   setModel: (model) => {
     const updatedModel = { ...model };
     if (updatedModel.quantificationSettings) {
-      if (updatedModel.quantificationSettings.cutOff === 1e-9 || !updatedModel.quantificationSettings.cutOff) {
-        updatedModel.quantificationSettings = {
-          ...updatedModel.quantificationSettings,
-          cutOff: 1e-20
-        };
+      // Force update legacy default values to new system standards if they haven't changed
+      if (updatedModel.quantificationSettings.cutOff === 1e-20 || updatedModel.quantificationSettings.cutOff === 1e-9 || !updatedModel.quantificationSettings.cutOff) {
+        updatedModel.quantificationSettings.cutOff = 1e-10;
       }
+      // Convert legacy single-string approximation into user's desired full array default
+      const currentAppx = updatedModel.quantificationSettings.approximation;
+      if (typeof currentAppx === 'string' && currentAppx === 'bdd_exact') {
+        updatedModel.quantificationSettings.approximation = ['bdd_exact', 'mcub', 'rare_event'];
+        // Also pair this with default UI correction for uncertainty if strictly following legacy path
+        updatedModel.quantificationSettings.runUncertainty = false;
+      } else if (!Array.isArray(currentAppx)) {
+        // Catch all other edge cases
+        updatedModel.quantificationSettings.approximation = ['bdd_exact', 'mcub', 'rare_event'];
+      }
+
       if (updatedModel.quantificationSettings.maxCutsets === undefined) {
         updatedModel.quantificationSettings.maxCutsets = 100000;
       }
+
+      if (updatedModel.quantificationSettings.bddCutOff === undefined) {
+        updatedModel.quantificationSettings.bddCutOff = updatedModel.quantificationSettings.cutOff || 1e-10;
+      }
     } else {
       updatedModel.quantificationSettings = {
-        cutOff: 1e-20,
-        approximation: 'bdd_exact',
+        cutOff: 1e-10,
+        bddCutOff: 1e-10,
+        approximation: ['bdd_exact', 'mcub', 'rare_event'],
         monteCarloSamples: 10000,
         useLHS: true,
         runUncertainty: false,
@@ -2516,14 +2532,30 @@ export const useModelStore = create<ModelState>((set, get) => ({
         if (!parsed.seismicSettings.selectedETIds) parsed.seismicSettings.selectedETIds = [];
         if (!parsed.quantificationSettings) {
           parsed.quantificationSettings = {
-            cutOff: 1e-20,
-            approximation: 'bdd_exact',
+            cutOff: 1e-10,
+            bddCutOff: 1e-10,
+            approximation: ['bdd_exact', 'mcub', 'rare_event'],
             monteCarloSamples: 10000,
             useLHS: true,
-            runUncertainty: false
+            runUncertainty: false,
+            maxCutsets: 100000
           };
-        } else if (parsed.quantificationSettings.cutOff === 1e-9 || !parsed.quantificationSettings.cutOff) {
-          parsed.quantificationSettings.cutOff = 1e-20;
+        } else {
+          // Force update legacy default values
+          if (parsed.quantificationSettings.cutOff === 1e-20 || parsed.quantificationSettings.cutOff === 1e-9 || !parsed.quantificationSettings.cutOff) {
+            parsed.quantificationSettings.cutOff = 1e-10;
+          }
+          if (parsed.quantificationSettings.bddCutOff === undefined) {
+            parsed.quantificationSettings.bddCutOff = parsed.quantificationSettings.cutOff || 1e-10;
+          }
+          // Convert legacy single-string approximation into array default
+          const currentAppx = parsed.quantificationSettings.approximation;
+          if (typeof currentAppx === 'string' && currentAppx === 'bdd_exact') {
+            parsed.quantificationSettings.approximation = ['bdd_exact', 'mcub', 'rare_event'];
+            parsed.quantificationSettings.runUncertainty = false;
+          } else if (!Array.isArray(currentAppx)) {
+            parsed.quantificationSettings.approximation = ['bdd_exact', 'mcub', 'rare_event'];
+          }
         }
 
         const model: PRAModel = {

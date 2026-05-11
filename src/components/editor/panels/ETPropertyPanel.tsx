@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useModelStore } from '@/store/modelStore';
+import type { InitiatingEvent } from '@/lib/types';
 
 interface ETPropertyPanelProps {
   selectedNodeId: string | null;

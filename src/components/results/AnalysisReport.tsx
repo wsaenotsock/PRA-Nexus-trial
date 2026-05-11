@@ -4,6 +4,7 @@ import React from 'react';
 import { useResultsStore } from '@/store/resultsStore';
 import { useModelStore } from '@/store/modelStore';
 import { formatDuration } from '@/lib/utils/format';
+import { aggregateResults } from '@/lib/utils/aggregation';
 
 export interface ReportOptions {
   showExecSummary: boolean;
@@ -30,7 +31,14 @@ export default function AnalysisReport({
 }: AnalysisReportProps) {
   const results = useResultsStore((s) => s.results);
   const activeResultId = useResultsStore((s) => s.activeResultId);
-  const result = activeResultId ? results[activeResultId] : null;
+  
+  const result = React.useMemo(() => {
+    if (!activeResultId) return null;
+    if (activeResultId === '__total_aggregated__') {
+      return aggregateResults(Object.values(results));
+    }
+    return results[activeResultId];
+  }, [activeResultId, results]);
   const model = useModelStore((s) => s.model);
   const selectedEventTreeId = useModelStore((s) => s.selectedEventTreeId);
   const et = model.eventTrees.find(t => t.id === selectedEventTreeId);

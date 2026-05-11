@@ -131,9 +131,9 @@ export async function POST(request: Request) {
           const seqsToOr = fullResult.sequenceResults?.filter((sr: any) => {
             const ets = model.eventTrees;
             for (const et of ets) {
-              const seq = et.sequences.find(s => s.id === sr.sequenceId);
+              const seq = et.sequences.find((s: any) => s.id === sr.sequenceId);
               if (seq) {
-                const es = model.endStates.find(e => e.id === seq.endStateId);
+                const es = model.endStates.find((e: any) => e.id === seq.endStateId);
                 return es?.categories?.includes(targetId);
               }
             }
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
           const seqsToOr = fullResult.sequenceResults?.filter((sr: any) => {
             const ets = model.eventTrees;
             for (const et of ets) {
-              const seq = et.sequences.find(s => s.id === sr.sequenceId);
+              const seq = et.sequences.find((s: any) => s.id === sr.sequenceId);
               if (seq && seq.endStateId === targetId) return true;
             }
             return false;

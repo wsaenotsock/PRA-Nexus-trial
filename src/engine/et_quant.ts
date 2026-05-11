@@ -1,4 +1,4 @@
-import type { PRAModel, EventTree, QuantificationResult, SequenceResult, EndStateResult, CutSet } from '@/lib/types';
+import type { PRAModel, EventTree, QuantificationResult, SequenceResult, EndStateResult, CutSet, Sequence } from '@/lib/types';
 import { 
   quantifyFaultTree, 
   BDDNode, 
@@ -62,19 +62,35 @@ export function quantifyEventTree(
     probabilities.set(ie.id, ie.frequency);
   }
 
-  // 2. Build FT BDD Cache (Correctly handling CCF if needed)
-  // Note: CCF expansion is complex. To keep it consistent, we should ideally reuse buildBDD 
-  // after CCF expansion, but quantifyEventTree currently receives the raw model.
-  // For now, let's ensure basic BDD construction is correct.
+  // 2. Pre-compute Global Variable Order for consistent BDD logic
+  // To correctly combine BDDs from different FTs in the ET, we MUST use a single shared global variable order.
+  const referencedFTIds = new Set<string>();
+  if (ie && ie.linkedFaultTreeId) referencedFTIds.add(ie.linkedFaultTreeId);
+  et.functionalEvents.forEach(fe => {
+    if (fe.linkedFaultTreeId) referencedFTIds.add(fe.linkedFaultTreeId);
+  });
+  
+  const referencedTopGateIds: string[] = [];
+  referencedFTIds.forEach(ftId => {
+    const ft = model.faultTrees.find(f => f.id === ftId);
+    if (ft && ft.topGateId) referencedTopGateIds.push(ft.topGateId);
+  });
+
+  // Compute global DFS ordering covering all sub-trees
+  const globalVariableOrder = getVariableOrder(referencedTopGateIds, [], model.basicEvents, model.faultTrees);
+
+  // 3. Build FT BDD Cache
   const ftBDDCache = new Map<string, BDDNode>();
   const getFTBDD = (ftId: string): BDDNode => {
     if (ftBDDCache.has(ftId)) return ftBDDCache.get(ftId)!;
     const ft = model.faultTrees.find(f => f.id === ftId);
     if (!ft) return FALSE_NODE;
     
-    // Use a standard variable order
-    const vOrder = getVariableOrder(ft.topGateId, ft.gates, model.basicEvents, model.faultTrees);
-    const bdd = buildBDD(ft.topGateId, ft.gates, model.basicEvents, vOrder, model.faultTrees);
+    const bddCutoff = model.quantificationSettings?.bddCutOff ?? model.quantificationSettings?.cutOff ?? 1e-10;
+    
+    // IMPORTANT: Use the uniform shared globalVariableOrder to prevent crashes/corruption!
+    // Also passing user bddCutOff value for radical graph compression / pruning!
+    const bdd = buildBDD(ft.topGateId, ft.gates, model.basicEvents, globalVariableOrder, model.faultTrees, new Set(), new Map(), bddCutoff);
     ftBDDCache.set(ftId, bdd);
     return bdd;
   };
@@ -98,30 +114,53 @@ export function quantifyEventTree(
   const sequenceBDDs: Record<string, any> = {};
   let totalRiskBDD = FALSE_NODE;
 
+  // Cache for intermediate prefix BDDs to eliminate O(Depth * Count) redundancy
+  const pathBDDCache = new Map<string, BDDNode>();
+
+  // 4. Recursive Sequence Evaluator
   const evaluateSequence = (
-    seq: any, 
-    parentBDD: BDDNode, 
-    parentPathDesc: string, 
+    seq: Sequence,
+    baseBDD: BDDNode,
+    pathPrefix: string,
     currentEt: EventTree
   ) => {
-    let seqBDD = parentBDD;
-    let pathDesc = parentPathDesc;
+    let seqBDD = baseBDD;
+    let pathDesc = pathPrefix;
+    
+    let pathKey = "BASE";
 
-    for (const decision of seq.path) {
+    for (let i = 0; i < seq.path.length; i++) {
+      const decision = seq.path[i];
       const fe = currentEt.functionalEvents.find(f => f.id === decision.functionalEventId);
       if (!fe) continue;
+      
+      // Construct incremental cache key representing this distinct logic path
+      pathKey += `|${decision.functionalEventId}:${decision.branchId}`;
+      
+      // If we've already computed up to this prefix in ANY sequence, reuse it!
+      if (pathBDDCache.has(pathKey)) {
+        seqBDD = pathBDDCache.get(pathKey)!;
+        // Update metadata only (description string building)
+        const branchIndex = fe.branches.findIndex(b => b.id === decision.branchId);
+        const branch = fe.branches[branchIndex];
+        const isSuccess = branchIndex === 0;
+        const display = isSuccess ? 'Success' : 'Failure';
+        pathDesc += `${fe.name}(${display}) ➡ `;
+        continue;
+      }
 
-      const branch = fe.branches.find(b => b.id === decision.branchId);
+      const branchIndex = fe.branches.findIndex(b => b.id === decision.branchId);
+      const branch = fe.branches[branchIndex];
       if (!branch) continue;
 
-      const branchDisplay = branch.description || branch.label;
-      pathDesc += (pathDesc && !pathDesc.endsWith('➡ ') ? ' ➔ ' : '') + `${fe.name}(${branchDisplay})`;
+      const isSuccess = branchIndex === 0;
+      const display = isSuccess ? 'Success' : 'Failure';
+      pathDesc += `${fe.name}(${display}) ➡ `;
 
-      let branchBDD: BDDNode = FALSE_NODE;
-      
-      const searchTarget = (branch.label + ' ' + (branch.description || '')).toLowerCase();
-      const isSuccess = searchTarget.includes('success') || searchTarget.includes('成功') || searchTarget.includes('ok') || searchTarget.includes('正常');
-      const branchIndex = fe.branches.findIndex(b => b.id === decision.branchId);
+      let branchBDD = FALSE_NODE;
+
+      // Heuristic check if this branch is explicitly "Success" (Branch 0 usually)
+      const searchTarget = (branch.label || '').toLowerCase();
       const isFirstOrSuccess = isSuccess || (branchIndex === 0 && !searchTarget.includes('fail') && !searchTarget.includes('失敗'));
 
       if (fe.linkedFaultTreeId) {
@@ -156,6 +195,7 @@ export function quantifyEventTree(
       }
 
       seqBDD = bddAnd(seqBDD, branchBDD);
+      pathBDDCache.set(pathKey, seqBDD); // Store for reuse across parallel sequences
     }
 
     // もしトランスファー先ETが指定されていれば、再帰的に移行先ETを展開して計算！
@@ -173,9 +213,21 @@ export function quantifyEventTree(
 
     const seqFreq = calculateProbability(seqBDD, probabilities);
     
-    // Extract MCS for this specific sequence
-    const seqRawMCS = extractMCS(seqBDD);
-    const seqMinimalMCS = minimizeCutSets(seqRawMCS);
+    // Look up the end state to see if it is a success sequence.
+    // If success, we skip MCS extraction and Importance as they are analytical nonsense for success states, and cause exponential slowdowns.
+    const endState = model.endStates?.find(es => es.id === seq.endStateId);
+    const isSuccessState = endState 
+      ? (endState.categories.includes('success') || endState.name?.toLowerCase().includes('ok')) 
+      : false;
+
+    let seqRawMCS: string[][] = [];
+    let seqMinimalMCS: string[][] = [];
+
+    if (!isSuccessState) {
+      // Only extract failure cutsets for NON-SUCCESS sequences!
+      seqRawMCS = extractMCS(seqBDD);
+      seqMinimalMCS = minimizeCutSets(seqRawMCS);
+    }
     const seqCutSets: CutSet[] = seqMinimalMCS.map(cs => {
       let prob = 1;
       for (const id of cs) prob *= probabilities.get(id) ?? 0;
@@ -186,13 +238,10 @@ export function quantifyEventTree(
       };
     }).sort((a, b) => b.probability - a.probability).slice(0, 50);
 
-    // Calculate importance for this sequence
-    const seqImportance = calculateImportanceMeasures(
-      seqBDD,
-      model.basicEvents,
-      seqFreq,
-      probabilities
-    );
+    // Calculate importance for this sequence (skip if success)
+    const seqImportance = !isSuccessState 
+      ? calculateImportanceMeasures(seqBDD, model.basicEvents, seqFreq, probabilities)
+      : [];
 
     sequenceResults.push({
       sequenceId: seq.id,
@@ -211,8 +260,15 @@ export function quantifyEventTree(
       const isSuccess = categories.length === 1 && 
         (categories[0].toLowerCase() === 'success' || categories[0] === '成功' || categories[0] === 'OK');
       
+      const bddCutoff = model.quantificationSettings?.bddCutOff ?? model.quantificationSettings?.cutOff ?? 1e-10;
       if (es && !isSuccess) {
-        totalRiskBDD = bddOr(totalRiskBDD, seqBDD);
+        if (seqFreq >= bddCutoff) {
+          console.log(`      [ET-LOG] Aggregating significant sequence ${seq.id} (freq: ${seqFreq}) into totalRiskBDD...`);
+          totalRiskBDD = bddOr(totalRiskBDD, seqBDD);
+          console.log(`      [ET-LOG] SUCCESS aggregating ${seq.id}.`);
+        } else {
+          console.log(`      [ET-LOG] Skipping aggregation of trivial sequence ${seq.id} (freq: ${seqFreq} < bddCutoff).`);
+        }
       }
       
       const current = endStateFreqMap.get(seq.endStateId) || 0;

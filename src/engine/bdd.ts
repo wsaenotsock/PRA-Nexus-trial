@@ -160,8 +160,23 @@ export function buildBDD(
   basicEvents: BasicEvent[],
   variableOrder: string[],
   allFaultTrees: FaultTree[] = [],
-  visitedTrees: Set<string> = new Set()
+  visitedTrees: Set<string> = new Set(),
+  gateMemoMap: Map<string, BDDNode> = new Map(),
+  cutoff?: number,
+  probMemoMap: Map<string, number> = new Map()
 ): BDDNode {
+  // Early-Exit Conservative Probability Pruning
+  if (cutoff !== undefined && cutoff > 0) {
+    const maxP = getConservativeMaxProb(gateId, gates, basicEvents, allFaultTrees, probMemoMap);
+    if (maxP < cutoff) {
+      return FALSE_NODE;
+    }
+  }
+  // Caching for reused Gates within the same DAG computation
+  if (gateMemoMap.has(gateId)) {
+    return gateMemoMap.get(gateId)!;
+  }
+
   const gate = gates.find((g) => g.id === gateId);
   
   if (!gate) {
@@ -174,10 +189,14 @@ export function buildBDD(
         if (linkedFT && !visitedTrees.has(linkedFT.id)) {
           const newVisited = new Set(visitedTrees);
           newVisited.add(linkedFT.id);
-          return buildBDD(linkedFT.topGateId, linkedFT.gates, basicEvents, variableOrder, allFaultTrees, newVisited);
+          const res = buildBDD(linkedFT.topGateId, linkedFT.gates, basicEvents, variableOrder, allFaultTrees, newVisited, gateMemoMap, cutoff, probMemoMap);
+          gateMemoMap.set(gateId, res);
+          return res;
         }
       }
-      return makeBDDNode(be.id, TRUE_NODE, FALSE_NODE);
+      const res = makeBDDNode(be.id, TRUE_NODE, FALSE_NODE);
+      gateMemoMap.set(gateId, res);
+      return res;
     }
     return FALSE_NODE;
   }
@@ -188,52 +207,61 @@ export function buildBDD(
     if (linkedFT && !visitedTrees.has(linkedFT.id)) {
       const newVisited = new Set(visitedTrees);
       newVisited.add(linkedFT.id);
-      return buildBDD(linkedFT.topGateId, linkedFT.gates, basicEvents, variableOrder, allFaultTrees, newVisited);
+      const res = buildBDD(linkedFT.topGateId, linkedFT.gates, basicEvents, variableOrder, allFaultTrees, newVisited, gateMemoMap, cutoff, probMemoMap);
+      gateMemoMap.set(gateId, res);
+      return res;
     }
     return FALSE_NODE;
   }
 
-  // Build BDD for each child
+  // Build BDD for each child, passing along the map
   const childBDDs = gate.children.map((childId) => {
-    return buildBDD(childId, gates, basicEvents, variableOrder, allFaultTrees, visitedTrees);
+    return buildBDD(childId, gates, basicEvents, variableOrder, allFaultTrees, visitedTrees, gateMemoMap, cutoff, probMemoMap);
   });
 
-  if (childBDDs.length === 0) return FALSE_NODE;
+  if (childBDDs.length === 0) {
+    gateMemoMap.set(gateId, FALSE_NODE);
+    return FALSE_NODE;
+  }
+
+  let finalBDD: BDDNode;
 
   // Combine based on gate type
   switch (gate.type) {
     case 'AND': {
-      let result = childBDDs[0];
+      finalBDD = childBDDs[0];
       for (let i = 1; i < childBDDs.length; i++) {
-        result = bddAnd(result, childBDDs[i]);
+        finalBDD = bddAnd(finalBDD, childBDDs[i]);
       }
-      return result;
+      break;
     }
     case 'OR': {
-      let result = childBDDs[0];
+      finalBDD = childBDDs[0];
       for (let i = 1; i < childBDDs.length; i++) {
-        result = bddOr(result, childBDDs[i]);
+        finalBDD = bddOr(finalBDD, childBDDs[i]);
       }
-      return result;
+      break;
     }
     case 'ATLEAST':
     case 'VOTE': {
       const k = gate.k ?? 2;
-      // K-of-N: OR of all combinations of k elements ANDed
       const combos = combinations(childBDDs, k);
-      let result = FALSE_NODE;
+      finalBDD = FALSE_NODE;
       for (const combo of combos) {
         let andResult = combo[0];
         for (let i = 1; i < combo.length; i++) {
           andResult = bddAnd(andResult, combo[i]);
         }
-        result = bddOr(result, andResult);
+        finalBDD = bddOr(finalBDD, andResult);
       }
-      return result;
+      break;
     }
     default:
-      return FALSE_NODE;
+      finalBDD = FALSE_NODE;
   }
+
+  gateMemoMap.set(gateId, finalBDD);
+  return finalBDD;
 }
 
 // ===== Combinations Helper =====
@@ -387,9 +415,83 @@ export function mcubApprox(cutSets: CutSet[]): number {
   return 1 - product;
 }
 
+// ===== Conservative Probability Upper-Bound Propagation =====
+export function getConservativeMaxProb(
+  nodeId: string,
+  gates: Gate[],
+  basicEvents: BasicEvent[],
+  allFaultTrees: FaultTree[] = [],
+  memoMap: Map<string, number> = new Map()
+): number {
+  if (memoMap.has(nodeId)) return memoMap.get(nodeId)!;
+
+  // Prevent recursion cycle by temporarily marking with neutral value
+  memoMap.set(nodeId, 1.0);
+
+  let gate = gates.find((g) => g.id === nodeId);
+  
+  // Fallback gate discovery
+  if (!gate && allFaultTrees.length > 0) {
+    for (const ft of allFaultTrees) {
+      const found = ft.gates.find(g => g.id === nodeId);
+      if (found) {
+        gate = found;
+        gates = ft.gates;
+        break;
+      }
+    }
+  }
+
+  if (gate) {
+    let p = 1.0;
+    if (gate.type === 'TRANSFER' && gate.linkedFaultTreeId) {
+      const linkedFT = allFaultTrees.find(f => f.id === gate.linkedFaultTreeId);
+      p = linkedFT ? getConservativeMaxProb(linkedFT.topGateId, linkedFT.gates, basicEvents, allFaultTrees, memoMap) : 0;
+    } else if (gate.type === 'AND') {
+      p = 1.0;
+      for (const child of gate.children) {
+        p *= getConservativeMaxProb(child, gates, basicEvents, allFaultTrees, memoMap);
+      }
+    } else if (gate.type === 'OR') {
+      p = 0;
+      for (const child of gate.children) {
+        p += getConservativeMaxProb(child, gates, basicEvents, allFaultTrees, memoMap);
+      }
+    } else if (gate.type === 'VOTE' || gate.type === 'ATLEAST') {
+      // Conservative upper bound for k-out-of-n is just treated as an OR union
+      p = 0;
+      for (const child of gate.children) {
+        p += getConservativeMaxProb(child, gates, basicEvents, allFaultTrees, memoMap);
+      }
+    } else {
+      p = 1.0;
+    }
+    
+    const finalP = Math.min(Math.max(p, 0), 1.0);
+    memoMap.set(nodeId, finalP);
+    return finalP;
+  }
+
+  const be = basicEvents.find((e) => e.id === nodeId);
+  if (be) {
+    if (be.eventType === 'transferGate' && be.linkedFaultTreeId) {
+      const linkedFT = allFaultTrees.find(f => f.id === be.linkedFaultTreeId);
+      const res = linkedFT ? getConservativeMaxProb(linkedFT.topGateId, linkedFT.gates, basicEvents, allFaultTrees, memoMap) : 0;
+      memoMap.set(nodeId, res);
+      return res;
+    }
+    const res = be.probability ?? 0;
+    memoMap.set(nodeId, res);
+    return res;
+  }
+
+  memoMap.set(nodeId, 0);
+  return 0;
+}
+
 // ===== Variable Ordering (DFS heuristic) =====
 export function getVariableOrder(
-  topGateId: string, 
+  topGateId: string | string[], 
   gates: Gate[], 
   basicEvents: BasicEvent[],
   allFaultTrees: FaultTree[] = []
@@ -401,7 +503,20 @@ export function getVariableOrder(
     if (visited.has(nodeId)) return;
     visited.add(nodeId);
 
-    const gate = currentGates.find((g) => g.id === nodeId);
+    let gate = currentGates.find((g) => g.id === nodeId);
+    
+    // Fallback if gate not found in current context, search across all provided fault trees
+    if (!gate && allFaultTrees.length > 0) {
+      for (const ft of allFaultTrees) {
+        const found = ft.gates.find(g => g.id === nodeId);
+        if (found) {
+          gate = found;
+          currentGates = ft.gates; // Update traversal context
+          break;
+        }
+      }
+    }
+
     if (gate) {
       if (gate.type === 'TRANSFER' && gate.linkedFaultTreeId) {
         const linkedFT = allFaultTrees.find(f => f.id === gate.linkedFaultTreeId);
@@ -424,7 +539,10 @@ export function getVariableOrder(
     }
   }
 
-  dfs(topGateId, gates);
+  const rootIds = Array.isArray(topGateId) ? topGateId : [topGateId];
+  for (const rootId of rootIds) {
+    dfs(rootId, gates);
+  }
   return order;
 }
 

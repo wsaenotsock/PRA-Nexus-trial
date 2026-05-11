@@ -7,6 +7,7 @@ import UncertaintyPanel from './UncertaintyPanel';
 import SensitivityPanel from './SensitivityPanel';
 import { downloadFile, jsonToCsv } from '@/lib/utils/export';
 import { formatDuration } from '@/lib/utils/format';
+import { aggregateResults } from '@/lib/utils/aggregation';
 
 interface ResultsDashboardProps {
   locale?: 'ja' | 'en';
@@ -17,8 +18,18 @@ type ImportanceTab = 'fv' | 'raw' | 'rrw' | 'birnbaum';
 export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProps) {
   const results = useResultsStore((s) => s.results);
   const activeResultId = useResultsStore((s) => s.activeResultId);
-  const result = activeResultId ? results[activeResultId] : null;
+  const setActiveResult = useResultsStore((s) => s.setActiveResult);
   const isComputing = useResultsStore((s) => s.isComputing);
+  
+  const result = useMemo(() => {
+    if (!activeResultId) return null;
+    if (activeResultId === '__total_aggregated__') {
+      return aggregateResults(Object.values(results));
+    }
+    return results[activeResultId];
+  }, [activeResultId, results]);
+
+  const isAggregated = activeResultId === '__total_aggregated__';
   const model = useModelStore((s) => s.model);
   const [activeTab, setActiveTab] = useState<'cutsets' | 'importance' | 'endstates' | 'sequences' | 'uncertainty' | 'sensitivity'>('cutsets');
   const [importanceTab, setImportanceTab] = useState<ImportanceTab>('fv');
@@ -234,10 +245,61 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
   const primaryMethod = selectedMethods[0];
   const secondaryMethods = selectedMethods.slice(1);
 
+  const targetOptions = useMemo(() => {
+    const opts: { id: string; label: string }[] = [];
+    
+    // Include individual quantified results
+    Object.keys(results).forEach(rid => {
+      const ft = model.faultTrees.find(f => f.id === rid);
+      const et = model.eventTrees.find(e => e.id === rid);
+      const label = ft ? `🌳 ${ft.name}` : (et ? `🌿 ${et.name}` : `ID: ${rid}`);
+      opts.push({ id: rid, label });
+    });
+
+    // Insert Consolidated Total at the beginning if more than 1
+    if (Object.keys(results).length > 1) {
+      opts.unshift({ id: '__total_aggregated__', label: locale === 'ja' ? '📊 総合結果 (Consolidated)' : '📊 Total Consolidated' });
+    }
+    
+    return opts;
+  }, [results, model.faultTrees, model.eventTrees, locale]);
+
   return (
     <div className="animate-fadeIn" style={{
       display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden'
     }}>
+      {/* Top Selector Header */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        padding: '12px var(--space-md)', 
+        borderBottom: '1px solid var(--border-default)',
+        background: 'var(--bg-secondary)',
+        flexShrink: 0
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0 }}>{t.title}</h2>
+          {targetOptions.length > 0 && (
+            <select 
+              className="form-input"
+              style={{ height: '32px', padding: '0 12px', fontSize: '13px', minWidth: '220px', fontWeight: 500 }}
+              value={activeResultId || ''}
+              onChange={(e) => setActiveResult(e.target.value)}
+            >
+              {targetOptions.map(opt => (
+                <option key={opt.id} value={opt.id}>{opt.label}</option>
+              ))}
+            </select>
+          )}
+        </div>
+        {isAggregated && (
+          <div style={{ fontSize: '11px', color: 'var(--accent-blue)', fontWeight: 600, background: 'rgba(59, 130, 246, 0.1)', padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+            {locale === 'ja' ? '📊 統合表示モード' : '📊 Aggregated View Mode'}
+          </div>
+        )}
+      </div>
+
       {/* Summary Cards */}
       <div style={{
         display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 'var(--space-md)',
@@ -292,12 +354,14 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
           >
             {t.cutsets}
           </button>
-          <button
-            className={`tab ${activeTab === 'importance' ? 'tab--active' : ''}`}
-            onClick={() => setActiveTab('importance')}
-          >
-            {t.importance}
-          </button>
+          {!isAggregated && (
+            <button
+              className={`tab ${activeTab === 'importance' ? 'tab--active' : ''}`}
+              onClick={() => setActiveTab('importance')}
+            >
+              {t.importance}
+            </button>
+          )}
           <button
             className={`tab ${activeTab === 'endstates' ? 'tab--active' : ''}`}
             onClick={() => setActiveTab('endstates')}
@@ -312,18 +376,22 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
               {t.sequences}
             </button>
           )}
-          <button
-            className={`tab ${activeTab === 'uncertainty' ? 'tab--active' : ''}`}
-            onClick={() => setActiveTab('uncertainty')}
-          >
-            {t.uncertainty}
-          </button>
-          <button
-            className={`tab ${activeTab === 'sensitivity' ? 'tab--active' : ''}`}
-            onClick={() => setActiveTab('sensitivity')}
-          >
-            {t.sensitivity}
-          </button>
+          {!isAggregated && (
+            <>
+              <button
+                className={`tab ${activeTab === 'uncertainty' ? 'tab--active' : ''}`}
+                onClick={() => setActiveTab('uncertainty')}
+              >
+                {t.uncertainty}
+              </button>
+              <button
+                className={`tab ${activeTab === 'sensitivity' ? 'tab--active' : ''}`}
+                onClick={() => setActiveTab('sensitivity')}
+              >
+                {t.sensitivity}
+              </button>
+            </>
+          )}
         </div>
       </div>
 

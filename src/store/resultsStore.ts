@@ -38,6 +38,27 @@ export const useResultsStore = create<ResultsState>((set) => ({
 let workerInstance: Worker | null = null;
 let msgId = 0;
 const resolvers = new Map<number, { resolve: (val: any) => void; reject: (err: any) => void }>();
+let currentAbortController: AbortController | null = null;
+
+export function abortComputation() {
+  if (currentAbortController) {
+    currentAbortController.abort();
+    currentAbortController = null;
+  }
+
+  if (workerInstance) {
+    console.warn('[Compute] Hard-terminating worker by user request.');
+    workerInstance.terminate();
+    workerInstance = null;
+  }
+
+  resolvers.forEach((deferred) => {
+    deferred.reject(new Error('ABORTED'));
+  });
+  resolvers.clear();
+
+  useResultsStore.getState().setComputing(false);
+}
 
 function getWorker(): Worker {
   if (typeof window === 'undefined') {
@@ -77,11 +98,14 @@ export async function runWorkerCommand<T>(type: string, payload: any): Promise<T
       const endpoint = process.env.NEXT_PUBLIC_COMPUTE_ENDPOINT || '/api/quantify';
       console.log(`[Compute] Sending task to endpoint: ${endpoint}`);
 
+      currentAbortController = new AbortController();
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ type, payload: fullPayload }),
+        signal: currentAbortController.signal,
       });
+      currentAbortController = null;
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
@@ -91,6 +115,10 @@ export async function runWorkerCommand<T>(type: string, payload: any): Promise<T
       const data = await response.json();
       return data.result as T;
     } catch (err: any) {
+      currentAbortController = null;
+      if (err.name === 'AbortError') {
+        throw new Error('ABORTED');
+      }
       throw new Error(`Server quantification failed: ${err.message}`);
     }
   }

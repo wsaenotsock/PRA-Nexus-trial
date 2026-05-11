@@ -318,12 +318,17 @@ export default function FaultTreeCanvas({
         return existing ? { ...newEdge, selected: existing.selected } : newEdge;
       })
     );
-    // Automatically fit view when switching fault trees
-    if (nodes.length > 0 && reactFlowInstance.current) {
-      const instance = reactFlowInstance.current;
-      setTimeout(() => instance.fitView({ duration: 600, padding: 0.2 }), 50);
+  }, [nodes, edges, setNodes, setEdges]);
+
+  // Automatically fit view ONLY when switching to a DIFFERENT fault tree
+  React.useEffect(() => {
+    if (reactFlowInstance.current && nodes.length > 0) {
+      setTimeout(() => {
+        reactFlowInstance.current?.fitView({ duration: 600, padding: 0.2 });
+      }, 50);
     }
-  }, [nodes, edges, setNodes, setEdges, selectedFaultTreeId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFaultTreeId]);
 
   const onConnect: OnConnect = useCallback(
     (params) => {
