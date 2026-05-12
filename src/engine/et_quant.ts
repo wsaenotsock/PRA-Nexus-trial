@@ -250,6 +250,7 @@ export function quantifyEventTree(
       pathDescription: pathDesc.trim(),
       frequency: seqFreq,
       cutSets: seqCutSets,
+      rawCutSetCount: seqRawMCS.length,
       importanceMeasures: seqImportance
     });
 
@@ -339,6 +340,7 @@ export function quantifyEventTree(
     topEventProbability: totalNonSuccessFreq,
     topEventProbabilityApprox: topEventProbabilityApprox,
     cutSets,
+    rawCutSetCount: rawMCS.length,
     importanceMeasures,
     totalCDF: totalNonSuccessFreq,
     totalRiskBDD, // Exported for Monte Carlo

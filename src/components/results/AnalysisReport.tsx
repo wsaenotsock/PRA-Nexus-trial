@@ -268,8 +268,12 @@ export default function AnalysisReport({
 
       {options.showMCS && (
         <section style={{ pageBreakBefore: 'always' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', color: '#666', borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '15px' }}>
-            {t.mcsTitle}
+          <h3 style={{ fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', color: '#666', borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '15px', display: 'flex', justifyContent: 'space-between' }}>
+            <span>{t.mcsTitle}</span>
+            <span style={{ fontSize: '11px', fontWeight: 500, color: '#888' }}>
+              {locale === 'ja' ? '合計: ' : 'Total: '}{result.cutSets.length.toLocaleString()}
+              {result.rawCutSetCount !== undefined && ` (${locale === 'ja' ? '縮約前: ' : 'Raw: '}${result.rawCutSetCount.toLocaleString()})`}
+            </span>
           </h3>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
             <thead>

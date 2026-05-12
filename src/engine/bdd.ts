@@ -887,10 +887,13 @@ export function quantifyFaultTree(
 
   const computeTimeMs = performance.now() - startTime;
 
+  const rawCutSetCount = rawCutSets.length;
+
   return {
     topEventProbability,
     topEventProbabilityApprox,
     cutSets,
+    rawCutSetCount,
     importanceMeasures,
     totalRiskBDD: bddRoot, // Added for Monte Carlo
     computeTimeMs,

@@ -256,6 +256,7 @@ export interface SequenceResult {
   pathDescription: string;
   frequency: number;
   cutSets?: CutSet[];
+  rawCutSetCount?: number;
   importanceMeasures?: ImportanceMeasure[];
 }
 
@@ -288,6 +289,7 @@ export interface QuantificationResult {
   topEventProbability: number;
   topEventProbabilityApprox: number; // Rare event approx for comparison
   cutSets: CutSet[];
+  rawCutSetCount?: number;
   importanceMeasures: ImportanceMeasure[];
   totalCDF?: number;
   totalRiskBDD?: any; // Storing the BDD root for Monte Carlo

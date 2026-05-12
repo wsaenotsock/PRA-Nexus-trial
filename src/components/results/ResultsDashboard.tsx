@@ -106,6 +106,10 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
     return source || [];
   }, [selectedSeq, result]);
 
+  const activeRawCount = useMemo(() => {
+    return selectedSeq ? selectedSeq.rawCutSetCount : result?.rawCutSetCount;
+  }, [selectedSeq, result]);
+
   const totalPages = Math.max(1, Math.ceil(allCutsets.length / pageSize));
 
   const displayedCutsets = useMemo(() => {
@@ -319,12 +323,17 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
           )}
         </div>
         <div className="stat-card">
-          <div className="stat-card__label">{t.totalMCS}</div>
+          <div className="stat-card__label">{t.totalMCS} ({locale === 'ja' ? '縮約後' : 'Min'})</div>
           <div className="stat-card__value" style={{ color: 'var(--accent-amber)' }}>
             {result.cutSets.length.toLocaleString()}
           </div>
-          <div className="stat-card__sub">
-            Max order: {Math.max(...result.cutSets.map(c => c.order), 0)}
+          <div className="stat-card__sub" style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Max order: {Math.max(...result.cutSets.map(c => c.order), 0)}</span>
+            {result.rawCutSetCount !== undefined && (
+              <span style={{ color: 'var(--text-muted)' }}>
+                {locale === 'ja' ? '縮約前:' : 'Raw:'} {result.rawCutSetCount.toLocaleString()}
+              </span>
+            )}
           </div>
         </div>
         <div className="stat-card">
@@ -551,7 +560,12 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
                 </button>
                 
                 <div style={{ marginLeft: 'auto', fontSize: '12px', color: 'var(--text-tertiary)' }}>
-                  {locale === 'ja' ? '総件数: ' : 'Total: '}{allCutsets.length.toLocaleString()}
+                  {locale === 'ja' ? '表示件数: ' : 'Total: '}{allCutsets.length.toLocaleString()}
+                  {activeRawCount !== undefined && (
+                    <span style={{ opacity: 0.7, marginLeft: '6px' }}>
+                      ({locale === 'ja' ? '縮約前: ' : 'Raw: '}{activeRawCount.toLocaleString()})
+                    </span>
+                  )}
                 </div>
               </div>
             )}
