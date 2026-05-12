@@ -124,7 +124,7 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <div>💡 <strong>カットオフの注意点:</strong> 設定値を下げすぎると（例: 1e-40）、探索木が膨大になり極小確率の経路だけで「最大カットセット数」の枠を使い切ってしまいます。その結果、本来の支配的な組み合わせが抽出されなくなるため、近似値が急落する原因となります。</div>
           <div style={{ borderTop: '1px solid rgba(59, 130, 246, 0.2)', paddingTop: '6px' }}>
-            💡 <strong>最大数と抽出数の差異:</strong> 最大数（打ち切り値）を大きく設定しても、最終的な「総MCS数」がそれより少なくなることがあります。これは抽出過程で他の短い組み合わせに包含（吸収）され、極小カットセットとして整理・削減されるためです。
+            💡 <strong>最大数と抽出数の差異:</strong> 最大数（打ち切り値）を大きく設定しても、最終的な「総MCS数」がそれより少なくなることがあります。これは抽出過程で他の短い組み合わせに包含（吸収）され、極小カットセットとして整理・削減されるためです。なお、縮約前のカットセット数についても結果に出力しております。
           </div>
         </div>
       )
