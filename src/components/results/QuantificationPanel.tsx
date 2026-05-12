@@ -46,7 +46,7 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
   }, [settings.cutOff]);
 
   React.useEffect(() => {
-    setBddCutOffInput((settings.bddCutOff ?? settings.cutOff ?? 1e-20).toExponential());
+    setBddCutOffInput((settings.bddCutOff ?? 1e-20).toExponential());
   }, [settings.bddCutOff, settings.cutOff]);
   
   const [showPruningHelp, setShowPruningHelp] = React.useState(false);
@@ -275,27 +275,44 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
                 </label>
                 
                 {currentMethods.includes('bdd_exact') && (
-                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
-                    <label className="form-label" style={{ marginBottom: '4px', fontSize: '12px', color: 'var(--text-secondary)' }}>{t.bddCutOff}</label>
-                    <input 
-                      type="text" 
-                      className="form-input" 
-                      value={bddCutOffInput} 
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setBddCutOffInput(val);
-                        const parsed = parseFloat(val);
-                        if (!isNaN(parsed) && parsed >= 0) {
-                          handleChange('bddCutOff', parsed);
-                        }
-                      }}
-                      onBlur={() => {
-                        setBddCutOffInput((settings.bddCutOff ?? 1e-20).toExponential());
-                      }}
-                      placeholder="例: 1e-12"
-                      style={{ padding: '6px 10px', height: 'auto', fontSize: '13px', border: '1px solid var(--accent-blue)' }}
-                    />
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '6px', opacity: 0.9, lineHeight: 1.4 }}>
+                  <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={settings.enablePruning !== false} 
+                        onChange={(e) => handleChange('enablePruning', e.target.checked)} 
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      <span style={{ fontWeight: 500 }}>{locale === 'ja' ? 'Pruning（枝刈り）を使用' : 'Use Pruning'}</span>
+                    </label>
+
+                    {settings.enablePruning !== false && (
+                      <div style={{ paddingLeft: '24px' }}>
+                        <label className="form-label" style={{ marginBottom: '4px', fontSize: '12px', color: 'var(--text-secondary)' }}>{t.bddCutOff}</label>
+                        <input 
+                          type="text" 
+                          className="form-input" 
+                          value={bddCutOffInput} 
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setBddCutOffInput(val);
+                            const parsed = parseFloat(val);
+                            if (!isNaN(parsed) && parsed >= 0) {
+                              handleChange('bddCutOff', parsed);
+                            }
+                          }}
+                          onBlur={() => {
+                            setBddCutOffInput((settings.bddCutOff ?? 1e-20).toExponential());
+                          }}
+                          placeholder="例: 1e-12"
+                          style={{ padding: '6px 10px', height: 'auto', fontSize: '13px', border: '1px solid var(--accent-blue)' }}
+                        />
+                      </div>
+                    )}
+                    
+                    {settings.enablePruning !== false && (
+                      <div style={{ paddingLeft: '24px' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', opacity: 0.9, lineHeight: 1.4 }}>
                       {locale === 'ja' 
                         ? '※確率上限がこの閾値未満と判定された論理パスの展開をBDD構築時点で打ち切り、計算速度を大幅に向上させます。（例：閾値 1e-10 のとき、サブツリーの最大確率が 1e-15 である場合は展開を即時打ち切ります）' 
                         : '* Discards logical subtree expansion during BDD synthesis when the upper bound probability falls below this value. (e.g., terminates search if subtree max probability is 1e-15 while threshold is 1e-10)'}
@@ -324,7 +341,9 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
                   </div>
                 )}
               </div>
-            </div>
+            )}
+          </div>
+        </div>
 
             {/* Right Group: Approximation Logic & Cutset Extraction (Highly coupled) */}
             <div style={{ 

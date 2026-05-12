@@ -25,6 +25,7 @@ import { useResultsStore, runWorkerCommand, abortComputation } from '@/store/res
 import { useYjsStore } from '@/store/yjsStore';
 
 import ValidationPanel from '@/components/editor/ValidationPanel';
+import FeedbackModal from '@/components/feedback/FeedbackModal';
 
 type ViewMode = 'editor' | 'et_editor' | 'results' | 'split' | 'data' | 'report' | 'seismic' | 'quantification';
 type Locale = 'ja' | 'en';
@@ -48,6 +49,7 @@ export default function Home() {
     showMCS: true
   });
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [modal, setModal] = useState<{
     show: boolean,
     type: 'new' | 'rename' | 'delete' | 'deleteNode' | 'deleteEdge',
@@ -1134,6 +1136,48 @@ export default function Home() {
           }}
         />
       )}
+
+      {/* ===== Floating Feedback Trigger ===== */}
+      <button
+        onClick={() => setShowFeedbackModal(true)}
+        title={locale === 'ja' ? '要望・不具合を報告する' : 'Report request / bug'}
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          zIndex: 9000,
+          width: '48px',
+          height: '48px',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, var(--accent-blue), #2563eb)',
+          color: 'white',
+          border: 'none',
+          boxShadow: '0 8px 24px rgba(37, 99, 235, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '22px',
+          transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        }}
+        onMouseOver={e => {
+          e.currentTarget.style.transform = 'scale(1.1) translateY(-4px)';
+          e.currentTarget.style.boxShadow = '0 12px 32px rgba(37, 99, 235, 0.5)';
+        }}
+        onMouseOut={e => {
+          e.currentTarget.style.transform = 'scale(1) translateY(0)';
+          e.currentTarget.style.boxShadow = '0 8px 24px rgba(37, 99, 235, 0.4)';
+        }}
+      >
+        💬
+      </button>
+
+      {/* ===== Feedback Modal ===== */}
+      <FeedbackModal 
+        isOpen={showFeedbackModal} 
+        onClose={() => setShowFeedbackModal(false)} 
+        locale={locale} 
+      />
     </div>
   );
 }

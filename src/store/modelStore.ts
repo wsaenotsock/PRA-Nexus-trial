@@ -1318,6 +1318,7 @@ function createDefaultModel(): PRAModel {
   "quantificationSettings": {
     "cutOff": 1e-10,
     "bddCutOff": 1e-20,
+    "enablePruning": true,
     "approximation": ["bdd_exact", "mcub", "rare_event"],
     "monteCarloSamples": 10000,
     "useLHS": true,
@@ -1421,12 +1422,16 @@ export const useModelStore = create<ModelState>((set, get) => ({
       }
 
       if (updatedModel.quantificationSettings.bddCutOff === undefined) {
-        updatedModel.quantificationSettings.bddCutOff = updatedModel.quantificationSettings.cutOff || 1e-20;
+        updatedModel.quantificationSettings.bddCutOff = 1e-20;
+      }
+      if (updatedModel.quantificationSettings.enablePruning === undefined) {
+        updatedModel.quantificationSettings.enablePruning = true;
       }
     } else {
       updatedModel.quantificationSettings = {
         cutOff: 1e-10,
         bddCutOff: 1e-20,
+        enablePruning: true,
         approximation: ['bdd_exact', 'mcub', 'rare_event'],
         monteCarloSamples: 10000,
         useLHS: true,
@@ -2533,6 +2538,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
           parsed.quantificationSettings = {
             cutOff: 1e-10,
             bddCutOff: 1e-20,
+            enablePruning: true,
             approximation: ['bdd_exact', 'mcub', 'rare_event'],
             monteCarloSamples: 10000,
             useLHS: true,
@@ -2545,7 +2551,10 @@ export const useModelStore = create<ModelState>((set, get) => ({
             parsed.quantificationSettings.cutOff = 1e-10;
           }
           if (parsed.quantificationSettings.bddCutOff === undefined) {
-            parsed.quantificationSettings.bddCutOff = parsed.quantificationSettings.cutOff || 1e-20;
+            parsed.quantificationSettings.bddCutOff = 1e-20;
+          }
+          if (parsed.quantificationSettings.enablePruning === undefined) {
+            parsed.quantificationSettings.enablePruning = true;
           }
           // Convert legacy single-string approximation into array default
           const currentAppx = parsed.quantificationSettings.approximation;

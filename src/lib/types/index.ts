@@ -195,6 +195,7 @@ export interface SeismicSettings {
 export interface GlobalQuantificationSettings {
   cutOff: number;
   bddCutOff: number;
+  enablePruning?: boolean;
   approximation: ('bdd_exact' | 'rare_event' | 'mcub')[];
   monteCarloSamples: number;
   useLHS: boolean;
