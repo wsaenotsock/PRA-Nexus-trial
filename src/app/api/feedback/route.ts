@@ -10,7 +10,6 @@ function ensureDir(dir: string) {
 }
 
 export async function POST(req: NextRequest) {
-  ensureDir(FEEDBACK_DIR);
   try {
     const body = await req.json();
     const { type, content, user } = body;
@@ -19,20 +18,77 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Content is required' }, { status: 400 });
     }
 
+    const now = new Date().toLocaleString('ja-JP');
+    const feedbackType = {
+      suggestion: '💡 機能要望',
+      bug: '🐞 不具合報告',
+      question: '❓ 質問',
+      other: '💬 その他'
+    }[type as string] || '📝 一般';
+
+    const emailContent = `
+      <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; max-width: 600px;">
+        <h2 style="color: #2563eb; margin-top: 0;">PRA Nexus 新しい要望が届きました</h2>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+          <tr style="background: #f8fafc;">
+            <td style="padding: 8px; font-weight: bold; width: 120px;">送信日時</td>
+            <td style="padding: 8px;">${now}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px; font-weight: bold;">種別</td>
+            <td style="padding: 8px;">${feedbackType}</td>
+          </tr>
+          <tr style="background: #f8fafc;">
+            <td style="padding: 8px; font-weight: bold;">送信ユーザー</td>
+            <td style="padding: 8px;">${user || '不明なユーザー'}</td>
+          </tr>
+        </table>
+        <div style="padding: 15px; background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 4px; white-space: pre-wrap;">
+${content}
+        </div>
+      </div>
+    `;
+
+    // === Cloud Dispatch (Vercel etc.) via Resend API ===
+    const apiKey = process.env.RESEND_API_KEY;
+    const toEmail = process.env.FEEDBACK_RECIPIENT_EMAIL || 'onboarding@resend.dev'; // Default placeholder
+
+    if (apiKey) {
+      const resendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: 'PRA-Nexus <onboarding@resend.dev>', // Or your verified domain
+          to: toEmail,
+          subject: `【PRA Nexus 要望】${feedbackType}`,
+          html: emailContent,
+        }),
+      });
+
+      if (resendRes.ok) {
+        return NextResponse.json({ success: true, method: 'email' });
+      } else {
+        const errTxt = await resendRes.text();
+        console.error('Resend API Failure:', errTxt);
+        throw new Error('Failed to send via Resend API');
+      }
+    }
+
+    // === Local Fallback (write to file) if API key isn't configured ===
+    ensureDir(FEEDBACK_DIR);
     const id = uuidv4();
-    const now = new Date().toISOString();
-    
     const feedbackData = {
       id,
-      timestamp: now,
-      type: type || 'general',
+      timestamp: new Date().toISOString(),
+      type,
       user: user || 'anonymous',
       content: content.trim(),
       resolved: false
     };
-
-    // Format filename safely: e.g. feedback_20260512_uuid.json
-    const safeDate = now.replace(/[:.]/g, '-');
+    const safeDate = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `feedback_${safeDate}_${id.slice(0, 8)}.json`;
     
     fs.writeFileSync(
@@ -40,7 +96,7 @@ export async function POST(req: NextRequest) {
       JSON.stringify(feedbackData, null, 2)
     );
 
-    return NextResponse.json({ success: true, id });
+    return NextResponse.json({ success: true, method: 'filesystem' });
   } catch (e: any) {
     console.error('Feedback API Error:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
