@@ -86,7 +86,7 @@ export function quantifyEventTree(
     const ft = model.faultTrees.find(f => f.id === ftId);
     if (!ft) return FALSE_NODE;
     
-    const bddCutoff = model.quantificationSettings?.bddCutOff ?? model.quantificationSettings?.cutOff ?? 1e-10;
+    const bddCutoff = model.quantificationSettings?.bddCutOff ?? model.quantificationSettings?.cutOff ?? 1e-20;
     
     // IMPORTANT: Use the uniform shared globalVariableOrder to prevent crashes/corruption!
     // Also passing user bddCutOff value for radical graph compression / pruning!
@@ -260,7 +260,7 @@ export function quantifyEventTree(
       const isSuccess = categories.length === 1 && 
         (categories[0].toLowerCase() === 'success' || categories[0] === '成功' || categories[0] === 'OK');
       
-      const bddCutoff = model.quantificationSettings?.bddCutOff ?? model.quantificationSettings?.cutOff ?? 1e-10;
+      const bddCutoff = model.quantificationSettings?.bddCutOff ?? model.quantificationSettings?.cutOff ?? 1e-20;
       if (es && !isSuccess) {
         if (seqFreq >= bddCutoff) {
           console.log(`      [ET-LOG] Aggregating significant sequence ${seq.id} (freq: ${seqFreq}) into totalRiskBDD...`);

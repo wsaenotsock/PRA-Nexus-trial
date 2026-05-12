@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useModelStore } from '@/store/modelStore';
 import type { Parameter } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import { useTableSort } from '@/lib/hooks/useTableSort';
 
 export default function ParameterTable({ locale = 'ja' }: { locale?: 'ja' | 'en' }) {
   const model = useModelStore((s) => s.model);
@@ -38,10 +39,17 @@ export default function ParameterTable({ locale = 'ja' }: { locale?: 'ja' | 'en'
     }
   };
 
-  const filteredParams = (model.parameters || []).filter((p) => 
+  const baseFilteredParams = (model.parameters || []).filter((p) => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     p.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const { items: filteredParams, requestSort, sortConfig } = useTableSort<Parameter>(baseFilteredParams, 'name');
+
+  const getSortIcon = (key: string) => {
+    if (sortConfig?.key !== key) return ' ↕️';
+    return sortConfig.direction === 'asc' ? ' 🔼' : ' 🔽';
+  };
 
   return (
     <div style={{ padding: 'var(--space-lg)', height: '100%', overflowY: 'auto' }}>
@@ -71,11 +79,11 @@ export default function ParameterTable({ locale = 'ja' }: { locale?: 'ja' | 'en'
         <table className="results-table">
           <thead>
             <tr>
-              <th>{locale === 'ja' ? 'パラメータ名' : 'Name'}</th>
-              <th>{locale === 'ja' ? 'タイプ' : 'Type'}</th>
-              <th>{locale === 'ja' ? '値 (故障率/確率)' : 'Value'}</th>
-              <th>{locale === 'ja' ? '参照元' : 'Source'}</th>
-              <th>{locale === 'ja' ? '説明' : 'Description'}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('name')}>{locale === 'ja' ? 'パラメータ名' : 'Name'}{getSortIcon('name')}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('failureType')}>{locale === 'ja' ? 'タイプ' : 'Type'}{getSortIcon('failureType')}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('value')}>{locale === 'ja' ? '値 (故障率/確率)' : 'Value'}{getSortIcon('value')}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('source')}>{locale === 'ja' ? '参照元' : 'Source'}{getSortIcon('source')}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('description')}>{locale === 'ja' ? '説明' : 'Description'}{getSortIcon('description')}</th>
               <th>{locale === 'ja' ? '操作' : 'Actions'}</th>
             </tr>
           </thead>

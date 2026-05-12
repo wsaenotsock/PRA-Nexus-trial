@@ -1025,7 +1025,6 @@ function createDefaultModel(): PRAModel {
       "description": ""
     }
   ],
-  "seismicHazardCurves": [],
   "seismicHazards": [
     {
       "id": "69b1ffb1-b462-45c0-ae0f-86e807bbfc01",
@@ -1318,7 +1317,7 @@ function createDefaultModel(): PRAModel {
   },
   "quantificationSettings": {
     "cutOff": 1e-10,
-    "bddCutOff": 1e-10,
+    "bddCutOff": 1e-20,
     "approximation": ["bdd_exact", "mcub", "rare_event"],
     "monteCarloSamples": 10000,
     "useLHS": true,
@@ -1422,12 +1421,12 @@ export const useModelStore = create<ModelState>((set, get) => ({
       }
 
       if (updatedModel.quantificationSettings.bddCutOff === undefined) {
-        updatedModel.quantificationSettings.bddCutOff = updatedModel.quantificationSettings.cutOff || 1e-10;
+        updatedModel.quantificationSettings.bddCutOff = updatedModel.quantificationSettings.cutOff || 1e-20;
       }
     } else {
       updatedModel.quantificationSettings = {
         cutOff: 1e-10,
-        bddCutOff: 1e-10,
+        bddCutOff: 1e-20,
         approximation: ['bdd_exact', 'mcub', 'rare_event'],
         monteCarloSamples: 10000,
         useLHS: true,
@@ -2533,7 +2532,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
         if (!parsed.quantificationSettings) {
           parsed.quantificationSettings = {
             cutOff: 1e-10,
-            bddCutOff: 1e-10,
+            bddCutOff: 1e-20,
             approximation: ['bdd_exact', 'mcub', 'rare_event'],
             monteCarloSamples: 10000,
             useLHS: true,
@@ -2546,7 +2545,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
             parsed.quantificationSettings.cutOff = 1e-10;
           }
           if (parsed.quantificationSettings.bddCutOff === undefined) {
-            parsed.quantificationSettings.bddCutOff = parsed.quantificationSettings.cutOff || 1e-10;
+            parsed.quantificationSettings.bddCutOff = parsed.quantificationSettings.cutOff || 1e-20;
           }
           // Convert legacy single-string approximation into array default
           const currentAppx = parsed.quantificationSettings.approximation;

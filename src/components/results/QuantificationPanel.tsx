@@ -14,7 +14,7 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
   const model = useModelStore(s => s.model);
   const settings = model.quantificationSettings || {
     cutOff: 1e-10,
-    bddCutOff: 1e-10,
+    bddCutOff: 1e-20,
     approximation: ['bdd_exact', 'mcub', 'rare_event'],
     monteCarloSamples: 10000,
     useLHS: true,
@@ -39,14 +39,14 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
   };
   
   const [cutOffInput, setCutOffInput] = React.useState(settings.cutOff.toString());
-  const [bddCutOffInput, setBddCutOffInput] = React.useState((settings.bddCutOff ?? 1e-10).toString());
+  const [bddCutOffInput, setBddCutOffInput] = React.useState((settings.bddCutOff ?? 1e-20).toString());
 
   React.useEffect(() => {
     setCutOffInput(settings.cutOff.toExponential());
   }, [settings.cutOff]);
 
   React.useEffect(() => {
-    setBddCutOffInput((settings.bddCutOff ?? settings.cutOff ?? 1e-10).toExponential());
+    setBddCutOffInput((settings.bddCutOff ?? settings.cutOff ?? 1e-20).toExponential());
   }, [settings.bddCutOff, settings.cutOff]);
   
   const [showPruningHelp, setShowPruningHelp] = React.useState(false);
@@ -290,7 +290,7 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
                         }
                       }}
                       onBlur={() => {
-                        setBddCutOffInput((settings.bddCutOff ?? 1e-10).toExponential());
+                        setBddCutOffInput((settings.bddCutOff ?? 1e-20).toExponential());
                       }}
                       placeholder="例: 1e-12"
                       style={{ padding: '6px 10px', height: 'auto', fontSize: '13px', border: '1px solid var(--accent-blue)' }}
@@ -619,8 +619,8 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
                     <div style={{ margin: '0 0 0 24px', padding: '10px', background: 'rgba(239, 68, 68, 0.05)', border: '1px dashed rgba(239, 68, 68, 0.2)', borderRadius: '6px', fontSize: '12px', lineHeight: 1.5 }}>
                       <strong>{locale === 'ja' ? '⚠️ 理論上の注意点' : '⚠️ Theoretical Boundary Warning'}</strong><br/>
                       {locale === 'ja' 
-                        ? '万が一、「全く同じ基事象」が深い階層の ANDゲートの両方の入力 に入っているという非常に特殊な冗長構造がある場合、①の積算 ($P(A) \\times P(A)$) により推定確率が実態より一時的に低く見積もられ、稀に Pruning の網にかかる理論的可能性はゼロではありません。 しかし、これはPRAのモデリング上は非効率な設計として扱われる稀なケースであり、実用上は Pruning によって全体の結合計算が爆発的に速くなるメリットの方が遥かに大きく、計算誤差はユーザーが指定した閾値（Pruning Threshold）の範囲内に収まります。' 
-                        : 'If exact redundant instances of the exact same base event inhabit dual inputs of a single deep AND structure, multiplicative assumptions ($P(A) \\times P(A)$) may theoretical evaluate lower than ground truth, leading to dropoff. However, such setups represent modeling inefficiencies, and the immense practical compute speedup far outweighs this corner case, retaining precision within defined Threshold bounds.'}
+                        ? 'サポート系（電源等）の共有などにより、同一基事象が、あるANDゲートの下位にある複数の異なる系統に含まれる場合、単純積算 (P(A) × P(A)) によって確率上限値が数学的真値より小さく見積もられます。その枝全体の推定確率が極めて低く、計算上の閾値を下回る場合に限り、Pruning の対象となる理論的可能性があります。しかし、実用上は計算の劇的な高速化のメリットの方が遥かに大きく、計算上の誤差はユーザーが指定した閾値（Pruning Threshold）の範囲内に収まります。' 
+                        : 'If identical base events populate multiple input branches under the same AND structure (e.g., due to shared support systems), multiplicative estimation (P(A) × P(A)) evaluates lower than the true probability. Theoretically, this could cause a very low-probability branch to fall below the threshold and be discarded early. In practice, the immense computational speedup far outweighs this, and accuracy impact is contained within user-defined Threshold bounds.'}
                     </div>
                   </div>
 

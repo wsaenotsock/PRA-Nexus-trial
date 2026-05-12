@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useModelStore } from '@/store/modelStore';
 import type { CCFGroup } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import { useTableSort } from '@/lib/hooks/useTableSort';
 
 export default function CCFGroupTable({ locale = 'ja' }: { locale?: 'ja' | 'en' }) {
   const model = useModelStore((s) => s.model);
@@ -43,10 +44,17 @@ export default function CCFGroupTable({ locale = 'ja' }: { locale?: 'ja' | 'en' 
     updateCCFGroup({ ...group, model: newModel, parameters: newParams });
   };
 
-  const filteredGroups = (model.ccfGroups || []).filter((g) => 
+  const baseFilteredGroups = (model.ccfGroups || []).filter((g) => 
     g.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     g.id.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const { items: filteredGroups, requestSort, sortConfig } = useTableSort<CCFGroup>(baseFilteredGroups, 'name');
+
+  const getSortIcon = (key: string) => {
+    if (sortConfig?.key !== key) return ' ↕️';
+    return sortConfig.direction === 'asc' ? ' 🔼' : ' 🔽';
+  };
 
   return (
     <div style={{ padding: 'var(--space-lg)', height: '100%', overflowY: 'auto' }}>
@@ -76,10 +84,10 @@ export default function CCFGroupTable({ locale = 'ja' }: { locale?: 'ja' | 'en' 
         <table className="results-table">
           <thead>
             <tr>
-              <th>{locale === 'ja' ? 'グループ名' : 'Name'}</th>
-              <th>{locale === 'ja' ? 'モデル' : 'Model'}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('name')}>{locale === 'ja' ? 'グループ名' : 'Name'}{getSortIcon('name')}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('model')}>{locale === 'ja' ? 'モデル' : 'Model'}{getSortIcon('model')}</th>
               <th>{locale === 'ja' ? 'パラメータ' : 'Parameters'}</th>
-              <th>{locale === 'ja' ? 'メンバー (基事象)' : 'Members'}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('members')}>{locale === 'ja' ? 'メンバー (基事象)' : 'Members'}{getSortIcon('members')}</th>
               <th>{locale === 'ja' ? '操作' : 'Actions'}</th>
             </tr>
           </thead>

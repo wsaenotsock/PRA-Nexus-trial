@@ -13,6 +13,8 @@ import ParameterTable from '@/components/data/ParameterTable';
 import CCFGroupTable from '@/components/data/CCFGroupTable';
 import InitiatingEventTable from '@/components/data/InitiatingEventTable';
 import EndStateTable from '@/components/data/EndStateTable';
+import FaultTreeTable from '@/components/data/FaultTreeTable';
+import EventTreeTable from '@/components/data/EventTreeTable';
 import SeismicDashboard from '@/components/seismic/SeismicDashboard';
 import QuantificationPanel from '@/components/results/QuantificationPanel';
 import ProjectManager from '@/components/project/ProjectManager';
@@ -30,7 +32,7 @@ type Locale = 'ja' | 'en';
 export default function Home() {
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
   const [editorType, setEditorType] = useState<'FT' | 'ET'>('FT');
-  const [dataViewTab, setDataViewTab] = useState<'basicEvents' | 'parameters' | 'ccf' | 'initiatingEvents' | 'endStates'>('basicEvents');
+  const [dataViewTab, setDataViewTab] = useState<'faultTrees' | 'eventTrees' | 'basicEvents' | 'parameters' | 'ccf' | 'initiatingEvents' | 'endStates'>('basicEvents');
   const [locale, setLocale] = useState<Locale>('ja');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedNodeType, setSelectedNodeType] = useState<string | null>(null);
@@ -1003,6 +1005,12 @@ export default function Home() {
           <div style={{ flex: 1, background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '16px 16px 0 16px', borderBottom: '1px solid var(--border-default)' }}>
               <div className="tabs" style={{ background: 'transparent' }}>
+                <button className={`tab ${dataViewTab === 'faultTrees' ? 'tab--active' : ''}`} onClick={() => setDataViewTab('faultTrees')}>
+                  🌿 {locale === 'ja' ? 'Fault Trees' : 'Fault Trees'}
+                </button>
+                <button className={`tab ${dataViewTab === 'eventTrees' ? 'tab--active' : ''}`} onClick={() => setDataViewTab('eventTrees')}>
+                  🌳 {locale === 'ja' ? 'Event Trees' : 'Event Trees'}
+                </button>
                 <button className={`tab ${dataViewTab === 'basicEvents' ? 'tab--active' : ''}`} onClick={() => setDataViewTab('basicEvents')}>
                   {locale === 'ja' ? '基事象' : 'Basic Events'}
                 </button>
@@ -1021,7 +1029,9 @@ export default function Home() {
               </div>
             </div>
             <div style={{ flex: 1, overflow: 'hidden' }}>
-              {dataViewTab === 'basicEvents' && <BasicEventTable locale={locale} highlightedId={highlightedEntityId} />}
+              {dataViewTab === 'faultTrees' && <FaultTreeTable locale={locale} onOpenFT={(id) => { selectFaultTree(id); setEditorType('FT'); setViewMode('editor'); }} />}
+              {dataViewTab === 'eventTrees' && <EventTreeTable locale={locale} onOpenET={(id) => { selectEventTree(id); setEditorType('ET'); setViewMode('et_editor'); }} />}
+              {dataViewTab === 'basicEvents' && <BasicEventTable locale={locale} highlightedId={highlightedEntityId} onNavigateToFT={(ftId, nodeId) => { selectFaultTree(ftId); setEditorType('FT'); setViewMode('editor'); if (nodeId) { setSelectedNodeId(nodeId); setSelectedNodeType('basicEvent'); } }} />}
               {dataViewTab === 'initiatingEvents' && <InitiatingEventTable locale={locale} />}
               {dataViewTab === 'parameters' && <ParameterTable locale={locale} />}
               {dataViewTab === 'ccf' && <CCFGroupTable locale={locale} />}

@@ -207,6 +207,7 @@ export default function FaultTreeCanvas({
 
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number, nodeId: string, nodeType: string } | null>(null);
   const [dragOverNodeId, setDragOverNodeId] = useState<string | null>(null);
+  const [copiedNodeId, setCopiedNodeId] = useState<{ nodeId: string, nodeType: string } | null>(null);
 
   const { nodes, edges } = useMemo(() => {
     const ft = model.faultTrees?.find((t) => t.id === selectedFaultTreeId);
@@ -495,7 +496,7 @@ export default function FaultTreeCanvas({
     
     const be = model.basicEvents.find((e) => e.id === nodeId);
     if (be) {
-      currentPosition = be.position;
+      currentPosition = be.position || { x: 0, y: 0 };
       isBasicEvent = true;
     } else {
       const gate = faultTree.gates.find((g) => g.id === nodeId);
@@ -537,7 +538,7 @@ export default function FaultTreeCanvas({
     if (isBasicEvent && be) {
       updateBasicEvent({
         ...be,
-        position: { x: be.position.x, y: be.position.y + 100 },
+        position: { x: (be.position?.x || 0), y: (be.position?.y || 0) + 100 },
       });
     } else {
       const targetGate = faultTree.gates.find((g) => g.id === nodeId);
@@ -552,6 +553,61 @@ export default function FaultTreeCanvas({
     setContextMenu(null);
   }, [contextMenu, selectedFaultTreeId, model, locale, addGate, updateGate, updateBasicEvent]);
 
+  const handleInsertSibling = useCallback((insertType: 'basicEvent' | 'gate') => {
+    if (!contextMenu || !selectedFaultTreeId) return;
+    const nodeId = contextMenu.nodeId;
+    const ft = model.faultTrees.find(t => t.id === selectedFaultTreeId);
+    if (!ft) return;
+
+    let currentPosition = { x: 0, y: 0 };
+    const targetBe = model.basicEvents.find(e => e.id === nodeId);
+    const targetGate = ft.gates.find(g => g.id === nodeId);
+    
+    if (targetBe) currentPosition = targetBe.position || { x: 0, y: 0 };
+    else if (targetGate) currentPosition = targetGate.position;
+    else return;
+
+    const parentGate = ft.gates.find(g => g.children.includes(nodeId));
+    const newId = uuidv4();
+    const newPos = { x: currentPosition.x + 250, y: currentPosition.y };
+
+    if (insertType === 'gate') {
+      addGate(selectedFaultTreeId, {
+        id: newId,
+        name: locale === 'ja' ? '新規ORゲート' : 'New OR Gate',
+        type: 'OR',
+        children: [],
+        position: newPos
+      });
+    } else {
+      addBasicEvent({
+        id: newId,
+        name: locale === 'ja' ? '新規基事象' : 'New Basic Event',
+        tags: [],
+        failureType: 'time',
+        failureRate: 1e-4,
+        probability: 1e-4,
+        missionTime: 24,
+        demands: 1,
+        distribution: { type: 'lognormal', mean: 1e-4, errorFactor: 3 },
+        source: '',
+        memo: '',
+        position: newPos
+      });
+    }
+
+    if (parentGate) {
+      const childIdx = parentGate.children.indexOf(nodeId);
+      const newChildren = [...parentGate.children];
+      newChildren.splice(childIdx + 1, 0, newId);
+      updateGate(selectedFaultTreeId, {
+        ...parentGate,
+        children: newChildren
+      });
+    }
+    setContextMenu(null);
+  }, [contextMenu, selectedFaultTreeId, model, locale, addGate, addBasicEvent, updateGate]);
+
   const handleDeleteNode = useCallback((nodeId: string, nodeType: string) => {
     if (onNodeDeleteRequest) {
       onNodeDeleteRequest(nodeId, nodeType);
@@ -560,54 +616,59 @@ export default function FaultTreeCanvas({
   }, [onNodeDeleteRequest]);
 
   const handleCopyNode = useCallback((nodeId: string, nodeType: string) => {
-    if (!selectedFaultTreeId) return;
-    
-    const faultTree = model.faultTrees.find(ft => ft.id === selectedFaultTreeId);
-    if (!faultTree) return;
+    setCopiedNodeId({ nodeId, nodeType });
+    setContextMenu(null);
+  }, []);
 
+  const handlePasteNode = useCallback(() => {
+    if (!contextMenu || !selectedFaultTreeId || !copiedNodeId) return;
+    const targetGateId = contextMenu.nodeId;
+    
+    const ft = model.faultTrees.find(t => t.id === selectedFaultTreeId);
+    const targetGate = ft?.gates.find(g => g.id === targetGateId);
+    if (!targetGate) return;
+
+    const { nodeId, nodeType } = copiedNodeId;
     const newId = uuidv4();
-    
-    // Find parent to link the copy to the same parent
-    const parentGate = faultTree.gates.find(g => g.children.includes(nodeId));
 
-    if (['andGate', 'orGate', 'atleastGate', 'topEvent'].includes(nodeType)) {
-      const gate = faultTree.gates.find(g => g.id === nodeId);
-      if (gate) {
+    if (['andGate', 'orGate', 'atleastGate', 'topEvent', 'transferGate'].includes(nodeType)) {
+      let sourceGate = null;
+      for (const f of model.faultTrees) {
+        const g = f.gates.find(gate => gate.id === nodeId);
+        if (g) {
+          sourceGate = g;
+          break;
+        }
+      }
+
+      if (sourceGate) {
         addGate(selectedFaultTreeId, {
-          ...gate,
+          ...sourceGate,
           id: newId,
-          name: `${gate.name} (Copy)`,
-          position: { x: gate.position.x + 50, y: gate.position.y + 50 },
+          name: `${sourceGate.name} (Copy)`,
+          position: { x: targetGate.position.x, y: targetGate.position.y + 180 },
           children: [] 
         });
         
-        if (parentGate) {
-          updateGate(selectedFaultTreeId, {
-            ...parentGate,
-            children: [...parentGate.children, newId]
-          });
-        }
+        updateGate(selectedFaultTreeId, {
+          ...targetGate,
+          children: [...targetGate.children, newId]
+        });
       }
     } else {
-      const be = model.basicEvents.find(e => e.id === nodeId);
-      if (be) {
-        addBasicEvent({
-          ...be,
-          id: newId,
-          name: `${be.name} (Copy)`,
-          position: be.position ? { x: be.position.x + 50, y: be.position.y + 50 } : { x: 50, y: 50 }
-        });
-
-        if (parentGate) {
+      // Basic Event / House Event / Undeveloped
+      // DO NOT create a new basic event. Use the EXACT same original ID to create a referenced link.
+      if (model.basicEvents.some(e => e.id === nodeId)) {
+        if (!targetGate.children.includes(nodeId)) {
           updateGate(selectedFaultTreeId, {
-            ...parentGate,
-            children: [...parentGate.children, newId]
+            ...targetGate,
+            children: [...targetGate.children, nodeId]
           });
         }
       }
     }
     setContextMenu(null);
-  }, [selectedFaultTreeId, model, addGate, addBasicEvent, updateGate]);
+  }, [contextMenu, selectedFaultTreeId, copiedNodeId, model, addGate, addBasicEvent, updateGate]);
   
   const handleMoveChild = useCallback((direction: 'left' | 'right') => {
     if (!contextMenu || !selectedFaultTreeId) return;
@@ -823,6 +884,67 @@ export default function FaultTreeCanvas({
           >
             {locale === 'ja' ? 'コピー' : 'Copy'}
           </button>
+          {['andGate', 'orGate', 'atleastGate', 'topEvent'].includes(contextMenu.nodeType) && copiedNodeId && (
+            <button
+              className="context-menu-item"
+              style={{
+                width: '100%',
+                padding: '8px 16px',
+                textAlign: 'left',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--accent-primary, #3b82f6)',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+              onClick={handlePasteNode}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
+              📋 {locale === 'ja' ? 'ここに貼り付け' : 'Paste Here'}
+            </button>
+          )}
+          {['basicEvent', 'houseEvent', 'undeveloped'].includes(contextMenu.nodeType) && (
+            <>
+              <button
+                className="context-menu-item"
+                style={{
+                  width: '100%',
+                  padding: '8px 16px',
+                  textAlign: 'left',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                }}
+                onClick={() => handleInsertSibling('basicEvent')}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                ➡️ {locale === 'ja' ? '右に基事象を挿入' : 'Insert Basic Event to Right'}
+              </button>
+              <button
+                className="context-menu-item"
+                style={{
+                  width: '100%',
+                  padding: '8px 16px',
+                  textAlign: 'left',
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                }}
+                onClick={() => handleInsertSibling('gate')}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                ➡️ {locale === 'ja' ? '右にゲートを挿入' : 'Insert Gate to Right'}
+              </button>
+            </>
+          )}
           {['andGate', 'orGate', 'atleastGate', 'basicEvent'].includes(contextMenu.nodeType) && (
             <button
               className="context-menu-item"
@@ -840,7 +962,7 @@ export default function FaultTreeCanvas({
               onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-secondary)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
             >
-              {locale === 'ja' ? '上にゲートを挿入する' : 'Insert Gate Above'}
+              ⬆️ {locale === 'ja' ? '上にゲートを挿入' : 'Insert Gate Above'}
             </button>
           )}
           <button

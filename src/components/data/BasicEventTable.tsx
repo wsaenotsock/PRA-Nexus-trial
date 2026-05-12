@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useModelStore } from '@/store/modelStore';
 import type { BasicEvent } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import { useTableSort } from '@/lib/hooks/useTableSort';
 
 function EditableNameCell({ be, allEvents, onUpdate, locale }: { be: BasicEvent, allEvents: BasicEvent[], onUpdate: (name: string) => void, locale: 'ja' | 'en' }) {
   const [val, setVal] = useState(be.name);
@@ -48,12 +49,28 @@ function EditableNameCell({ be, allEvents, onUpdate, locale }: { be: BasicEvent,
   );
 }
 
-export default function BasicEventTable({ locale = 'ja', highlightedId }: { locale?: 'ja' | 'en'; highlightedId?: string | null }) {
+export default function BasicEventTable({ locale = 'ja', highlightedId, onNavigateToFT }: { locale?: 'ja' | 'en'; highlightedId?: string | null; onNavigateToFT?: (ftId: string, nodeId?: string) => void }) {
   const model = useModelStore((s) => s.model);
   const updateBasicEvent = useModelStore((s) => s.updateBasicEvent);
   const addBasicEvent = useModelStore((s) => s.addBasicEvent);
   const [searchTerm, setSearchTerm] = useState('');
   const highlightRef = useRef<HTMLTableRowElement>(null);
+
+  const beUsageMap = React.useMemo(() => {
+    const map: Record<string, {id: string, name: string}[]> = {};
+    (model.faultTrees || []).forEach(ft => {
+      const referencedInFt = new Set<string>();
+      if (ft.topGateId) referencedInFt.add(ft.topGateId);
+      (ft.gates || []).forEach(g => {
+        (g.children || []).forEach(cid => referencedInFt.add(cid));
+      });
+      referencedInFt.forEach(id => {
+        if (!map[id]) map[id] = [];
+        map[id].push({ id: ft.id, name: ft.name });
+      });
+    });
+    return map;
+  }, [model.faultTrees]);
 
   const handleAdd = () => {
     const newId = uuidv4();
@@ -86,12 +103,24 @@ export default function BasicEventTable({ locale = 'ja', highlightedId }: { loca
     }
   };
 
-  const filteredEvents = model.basicEvents.filter((be) => 
-    be.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    be.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (be.eventId && be.eventId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    be.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const baseFilteredEvents = React.useMemo(() => {
+    return model.basicEvents.filter((be) => 
+      be.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      be.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (be.eventId && be.eventId.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      be.tags.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
+    ).map(be => ({
+      ...be,
+      _usageCount: (beUsageMap[be.id] || []).length
+    }));
+  }, [model.basicEvents, searchTerm, beUsageMap]);
+
+  const { items: filteredEvents, requestSort, sortConfig } = useTableSort<any>(baseFilteredEvents, 'eventId');
+
+  const getSortIcon = (key: string) => {
+    if (sortConfig?.key !== key) return ' ↕️';
+    return sortConfig.direction === 'asc' ? ' 🔼' : ' 🔽';
+  };
 
   // Auto-scroll to highlighted entity
   useEffect(() => {
@@ -128,17 +157,18 @@ export default function BasicEventTable({ locale = 'ja', highlightedId }: { loca
         <table className="results-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>{locale === 'ja' ? '基事象ID' : 'Event ID'}</th>
-              <th>{locale === 'ja' ? '名前' : 'Name'}</th>
-              <th>{locale === 'ja' ? 'タグ' : 'Tags'}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('id')}>ID{getSortIcon('id')}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('eventId')}>{locale === 'ja' ? '基事象ID' : 'Event ID'}{getSortIcon('eventId')}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('name')}>{locale === 'ja' ? '名前' : 'Name'}{getSortIcon('name')}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('tags')}>{locale === 'ja' ? 'タグ' : 'Tags'}{getSortIcon('tags')}</th>
               <th>{locale === 'ja' ? '参照パラメータ' : 'Parameter'}</th>
-              <th>{locale === 'ja' ? 'タイプ' : 'Type'}</th>
-              <th>{locale === 'ja' ? '故障率 (1/hr or 1/d)' : 'Failure Rate'}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('failureType')}>{locale === 'ja' ? 'タイプ' : 'Type'}{getSortIcon('failureType')}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('failureRate')}>{locale === 'ja' ? '故障率 (1/hr or 1/d)' : 'Failure Rate'}{getSortIcon('failureRate')}</th>
               <th>{locale === 'ja' ? '時間/デマンド数' : 'Time/Demands'}</th>
-              <th>{locale === 'ja' ? '確率' : 'Probability'}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('probability')}>{locale === 'ja' ? '確率' : 'Probability'}{getSortIcon('probability')}</th>
               <th>{locale === 'ja' ? '分布' : 'Dist.'}</th>
               <th>{locale === 'ja' ? '不確かさ' : 'Uncertainty'}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('_usageCount')}>{locale === 'ja' ? '使用箇所 (FT)' : 'Usage (FT)'}{getSortIcon('_usageCount')}</th>
               <th>{locale === 'ja' ? '操作' : 'Actions'}</th>
             </tr>
           </thead>
@@ -379,6 +409,24 @@ export default function BasicEventTable({ locale = 'ja', highlightedId }: { loca
                           />
                         </div>
                       </>
+                    )}
+                  </div>
+                </td>
+                <td>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '180px' }}>
+                    {(beUsageMap[be.id] || []).map(usage => (
+                      <button 
+                        key={usage.id}
+                        className="btn btn--secondary btn--sm"
+                        style={{ fontSize: '9px', padding: '2px 6px', borderRadius: '12px', whiteSpace: 'nowrap', gap: '3px', alignItems: 'center', display: 'inline-flex' }}
+                        onClick={() => onNavigateToFT?.(usage.id, be.id)}
+                        title={locale === 'ja' ? `${usage.name}へ移動` : `Go to ${usage.name}`}
+                      >
+                        🌿 <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', maxWidth: '100px' }}>{usage.name}</span>
+                      </button>
+                    ))}
+                    {(!beUsageMap[be.id] || beUsageMap[be.id].length === 0) && (
+                      <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>-</span>
                     )}
                   </div>
                 </td>

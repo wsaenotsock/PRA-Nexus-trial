@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useModelStore } from '@/store/modelStore';
 import type { InitiatingEvent } from '@/lib/types';
+import { useTableSort } from '@/lib/hooks/useTableSort';
 
 interface InitiatingEventTableProps {
   locale?: 'ja' | 'en';
@@ -15,11 +16,18 @@ export default function InitiatingEventTable({ locale = 'ja' }: InitiatingEventT
   const removeInitiatingEvent = useModelStore((s) => s.removeInitiatingEvent);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredIEs = (model.initiatingEvents || []).filter(ie => 
+  const baseFilteredIEs = (model.initiatingEvents || []).filter(ie => 
     ie.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     ie.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (ie.code || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const { items: filteredIEs, requestSort, sortConfig } = useTableSort<InitiatingEvent>(baseFilteredIEs, 'code');
+
+  const getSortIcon = (key: string) => {
+    if (sortConfig?.key !== key) return ' ↕️';
+    return sortConfig.direction === 'asc' ? ' 🔼' : ' 🔽';
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -57,14 +65,14 @@ export default function InitiatingEventTable({ locale = 'ja' }: InitiatingEventT
         <table className="results-table">
           <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
             <tr>
-              <th>{locale === 'ja' ? 'ID' : 'ID'}</th>
-              <th>{locale === 'ja' ? 'コード' : 'Code'}</th>
-              <th>{locale === 'ja' ? '名称' : 'Name'}</th>
-              <th>{locale === 'ja' ? '頻度 [/yr]' : 'Frequency [/yr]'}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('id')}>{locale === 'ja' ? 'ID' : 'ID'}{getSortIcon('id')}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('code')}>{locale === 'ja' ? 'コード' : 'Code'}{getSortIcon('code')}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('name')}>{locale === 'ja' ? '名称' : 'Name'}{getSortIcon('name')}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('frequency')}>{locale === 'ja' ? '頻度 [/yr]' : 'Frequency [/yr]'}{getSortIcon('frequency')}</th>
               <th>{locale === 'ja' ? '分布' : 'Dist.'}</th>
               <th>{locale === 'ja' ? '不確かさ' : 'Uncertainty'}</th>
               <th>{locale === 'ja' ? 'リンク済みFT' : 'Linked FT'}</th>
-              <th>{locale === 'ja' ? '説明' : 'Description'}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('description')}>{locale === 'ja' ? '説明' : 'Description'}{getSortIcon('description')}</th>
               <th style={{ width: '60px', textAlign: 'center' }}>{locale === 'ja' ? '操作' : 'Action'}</th>
             </tr>
           </thead>

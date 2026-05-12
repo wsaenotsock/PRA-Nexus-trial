@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useModelStore } from '@/store/modelStore';
 import type { EndState } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import { useTableSort } from '@/lib/hooks/useTableSort';
 
 interface EndStateTableProps {
   locale?: 'ja' | 'en';
@@ -18,21 +19,17 @@ interface CategoryInputProps {
 
 function CategoryInput({ value, onChange, locale, suggestions }: CategoryInputProps) {
   const [localValue, setLocalValue] = useState(value.join(', '));
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
-  // Sync with store when value changes externally (e.g. initial load or reset)
-  // However, avoid syncing while the user is actively typing
   React.useEffect(() => {
     const joined = value.join(', ');
     if (joined !== localValue && document.activeElement !== inputRef.current) {
       setLocalValue(joined);
     }
-  }, [value]);
-
-  const inputRef = React.useRef<HTMLInputElement>(null);
+  }, [value, localValue]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalValue(e.target.value);
-    // Parse and update store immediately, but keep the local string as is (to preserve trailing commas/spaces)
     const cats = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
     onChange(cats);
   };
@@ -94,12 +91,18 @@ export default function EndStateTable({ locale = 'ja' }: EndStateTableProps) {
   
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredEndStates = (model.endStates || []).filter(es => 
+  const rawFiltered = (model.endStates || []).filter(es => 
     es.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (es.categories || []).some(c => c.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Get unique categories for suggestions
+  const { items: filteredEndStates, requestSort, sortConfig } = useTableSort<EndState>(rawFiltered, 'name');
+
+  const getSortIcon = (key: string) => {
+    if (sortConfig?.key !== key) return ' ↕️';
+    return sortConfig.direction === 'asc' ? ' 🔼' : ' 🔽';
+  };
+
   const allCategories = (model.endStates || []).flatMap(es => es.categories || []);
   const existingCategories = Array.from(new Set(allCategories));
   if (!existingCategories.includes('success')) existingCategories.push('success');
@@ -134,10 +137,16 @@ export default function EndStateTable({ locale = 'ja' }: EndStateTableProps) {
         <table className="results-table">
           <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
             <tr>
-              <th style={{ width: '120px' }}>{locale === 'ja' ? '名称' : 'Name'}</th>
-              <th style={{ width: '180px' }}>{locale === 'ja' ? 'カテゴリ' : 'Category'}</th>
+              <th style={{ width: '120px', cursor: 'pointer' }} onClick={() => requestSort('name')}>
+                {locale === 'ja' ? '名称' : 'Name'}{getSortIcon('name')}
+              </th>
+              <th style={{ width: '180px', cursor: 'pointer' }} onClick={() => requestSort('categories')}>
+                {locale === 'ja' ? 'カテゴリ' : 'Category'}{getSortIcon('categories')}
+              </th>
               <th style={{ width: '80px' }}>{locale === 'ja' ? '色' : 'Color'}</th>
-              <th>{locale === 'ja' ? '説明' : 'Description'}</th>
+              <th style={{ cursor: 'pointer' }} onClick={() => requestSort('description')}>
+                {locale === 'ja' ? '説明' : 'Description'}{getSortIcon('description')}
+              </th>
               <th style={{ width: '80px' }}>{locale === 'ja' ? '操作' : 'Action'}</th>
             </tr>
           </thead>
