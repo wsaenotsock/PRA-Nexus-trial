@@ -378,6 +378,109 @@ export default function FaultTreeCanvas({
     [selectedFaultTreeId, removeChildFromGate]
   );
 
+  const pasteSubtree = useCallback((
+    sourceNodeId: string,
+    sourceNodeType: string,
+    targetGateId: string | null
+  ) => {
+    if (!selectedFaultTreeId) return;
+    const ft = model.faultTrees.find(t => t.id === selectedFaultTreeId);
+    if (!ft) return;
+
+    if (['andGate', 'orGate', 'atleastGate', 'topEvent', 'transferGate'].includes(sourceNodeType)) {
+      // Recursive clone of a sub-tree (gates)
+      let sourceGate = null;
+      let sourceFtId = null;
+      for (const f of model.faultTrees) {
+        const g = f.gates.find((gate) => gate.id === sourceNodeId);
+        if (g) {
+          sourceGate = g;
+          sourceFtId = f.id;
+          break;
+        }
+      }
+
+      if (sourceGate && sourceFtId) {
+        const sourceFt = model.faultTrees.find(f => f.id === sourceFtId);
+        if (!sourceFt) return;
+
+        // Calculate unified position offset to maintain visual structure
+        let offset = { x: 60, y: 60 };
+        if (targetGateId) {
+          const targetGate = ft.gates.find(g => g.id === targetGateId);
+          if (targetGate) {
+            offset = {
+              x: targetGate.position.x - sourceGate.position.x,
+              y: targetGate.position.y + 180 - sourceGate.position.y
+            };
+          }
+        }
+
+        // Recursive function to clone gate structures
+        const cloneSubtree = (currentGateId: string): string => {
+          const originalGate = sourceFt.gates.find(g => g.id === currentGateId);
+          if (!originalGate) return '';
+
+          const nextNewGateId = uuidv4();
+          const clonedChildren: string[] = [];
+
+          for (const childId of originalGate.children) {
+            const isChildGate = sourceFt.gates.some(g => g.id === childId);
+            if (isChildGate) {
+              // Recurse nested gates
+              const clonedChildGateId = cloneSubtree(childId);
+              if (clonedChildGateId) {
+                clonedChildren.push(clonedChildGateId);
+              }
+            } else {
+              // Basic Events keep EXACT same original ID for shared references (PRA logic)
+              clonedChildren.push(childId);
+            }
+          }
+
+          // Add the cloned gate
+          addGate(selectedFaultTreeId, {
+            ...originalGate,
+            id: nextNewGateId,
+            name: currentGateId === sourceNodeId ? `${originalGate.name} (Copy)` : originalGate.name,
+            position: {
+              x: originalGate.position.x + offset.x,
+              y: originalGate.position.y + offset.y
+            },
+            children: clonedChildren
+          });
+
+          return nextNewGateId;
+        };
+
+        // Begin cloning at the root of copied gate
+        const newRootGateId = cloneSubtree(sourceNodeId);
+
+        // Link the new cloned root under target parent gate if present
+        if (targetGateId && newRootGateId) {
+          const targetGate = ft.gates.find(g => g.id === targetGateId);
+          if (targetGate) {
+            updateGate(selectedFaultTreeId, {
+              ...targetGate,
+              children: [...targetGate.children, newRootGateId]
+            });
+          }
+        }
+      }
+    } else {
+      // Shared reference paste of a basic event (only if pasting onto a target gate)
+      if (targetGateId && model.basicEvents.some(e => e.id === sourceNodeId)) {
+        const targetGate = ft.gates.find(g => g.id === targetGateId);
+        if (targetGate && !targetGate.children.includes(sourceNodeId)) {
+          updateGate(selectedFaultTreeId, {
+            ...targetGate,
+            children: [...targetGate.children, sourceNodeId]
+          });
+        }
+      }
+    }
+  }, [selectedFaultTreeId, model, addGate, updateGate]);
+
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
       const isCmdOrCtrl = event.ctrlKey || event.metaKey;
@@ -411,73 +514,16 @@ export default function FaultTreeCanvas({
         if (!selectedFaultTreeId || !copiedNodeId) return;
         event.preventDefault(); // Prevent native browser pasting behaviors
 
-        const ft = model.faultTrees.find((t) => t.id === selectedFaultTreeId);
-        if (!ft) return;
-
         // Find selected node to determine if paste target is a gate
         const selectedNode = nodesState.find((n) => n.selected);
         const targetGateId = selectedNode && ['andGate', 'orGate', 'atleastGate', 'topEvent'].includes(selectedNode.type || (selectedNode.data as any).nodeType)
           ? selectedNode.id
           : null;
 
-        const { nodeId, nodeType } = copiedNodeId;
-        const newId = uuidv4();
-
-        if (['andGate', 'orGate', 'atleastGate', 'topEvent', 'transferGate'].includes(nodeType)) {
-          // Duplicate Gate Logic
-          let sourceGate = null;
-          for (const f of model.faultTrees) {
-            const g = f.gates.find((gate) => gate.id === nodeId);
-            if (g) {
-              sourceGate = g;
-              break;
-            }
-          }
-
-          if (sourceGate) {
-            let targetPosition = { x: sourceGate.position.x + 60, y: sourceGate.position.y + 60 };
-            if (targetGateId) {
-              const targetGate = ft.gates.find((g) => g.id === targetGateId);
-              if (targetGate) {
-                targetPosition = { x: targetGate.position.x, y: targetGate.position.y + 180 };
-              }
-            }
-
-            addGate(selectedFaultTreeId, {
-              ...sourceGate,
-              id: newId,
-              name: `${sourceGate.name} (Copy)`,
-              position: targetPosition,
-              children: [] 
-            });
-            
-            if (targetGateId) {
-              const targetGate = ft.gates.find((g) => g.id === targetGateId);
-              if (targetGate) {
-                updateGate(selectedFaultTreeId, {
-                  ...targetGate,
-                  children: [...targetGate.children, newId]
-                });
-              }
-            }
-          }
-        } else {
-          // Link Existing Basic Event / House Event / Undeveloped
-          if (model.basicEvents.some((e) => e.id === nodeId)) {
-            if (targetGateId) {
-              const targetGate = ft.gates.find((g) => g.id === targetGateId);
-              if (targetGate && !targetGate.children.includes(nodeId)) {
-                updateGate(selectedFaultTreeId, {
-                  ...targetGate,
-                  children: [...targetGate.children, nodeId]
-                });
-              }
-            }
-          }
-        }
+        pasteSubtree(copiedNodeId.nodeId, copiedNodeId.nodeType, targetGateId);
       }
     },
-    [edgesState, nodesState, onEdgeDeleteRequest, selectedFaultTreeId, copiedNodeId, model, addGate, updateGate, setCopiedNodeId]
+    [edgesState, nodesState, onEdgeDeleteRequest, selectedFaultTreeId, copiedNodeId, pasteSubtree, setCopiedNodeId]
   );
 
   const onNodeDragStop = useCallback(
@@ -708,51 +754,9 @@ export default function FaultTreeCanvas({
     if (!contextMenu || !selectedFaultTreeId || !copiedNodeId) return;
     const targetGateId = contextMenu.nodeId;
     
-    const ft = model.faultTrees.find(t => t.id === selectedFaultTreeId);
-    const targetGate = ft?.gates.find(g => g.id === targetGateId);
-    if (!targetGate) return;
-
-    const { nodeId, nodeType } = copiedNodeId;
-    const newId = uuidv4();
-
-    if (['andGate', 'orGate', 'atleastGate', 'topEvent', 'transferGate'].includes(nodeType)) {
-      let sourceGate = null;
-      for (const f of model.faultTrees) {
-        const g = f.gates.find(gate => gate.id === nodeId);
-        if (g) {
-          sourceGate = g;
-          break;
-        }
-      }
-
-      if (sourceGate) {
-        addGate(selectedFaultTreeId, {
-          ...sourceGate,
-          id: newId,
-          name: `${sourceGate.name} (Copy)`,
-          position: { x: targetGate.position.x, y: targetGate.position.y + 180 },
-          children: [] 
-        });
-        
-        updateGate(selectedFaultTreeId, {
-          ...targetGate,
-          children: [...targetGate.children, newId]
-        });
-      }
-    } else {
-      // Basic Event / House Event / Undeveloped
-      // DO NOT create a new basic event. Use the EXACT same original ID to create a referenced link.
-      if (model.basicEvents.some(e => e.id === nodeId)) {
-        if (!targetGate.children.includes(nodeId)) {
-          updateGate(selectedFaultTreeId, {
-            ...targetGate,
-            children: [...targetGate.children, nodeId]
-          });
-        }
-      }
-    }
+    pasteSubtree(copiedNodeId.nodeId, copiedNodeId.nodeType, targetGateId);
     setContextMenu(null);
-  }, [contextMenu, selectedFaultTreeId, copiedNodeId, model, addGate, addBasicEvent, updateGate]);
+  }, [contextMenu, selectedFaultTreeId, copiedNodeId, pasteSubtree]);
   
   const handleMoveChild = useCallback((direction: 'left' | 'right') => {
     if (!contextMenu || !selectedFaultTreeId) return;
