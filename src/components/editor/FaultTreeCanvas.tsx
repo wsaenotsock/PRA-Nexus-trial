@@ -155,9 +155,26 @@ export default function FaultTreeCanvas({
   };
 
   const CustomControls = () => {
-    const { zoom, x, y } = useViewport();
-    const { setViewport, fitView, zoomIn, zoomOut } = useReactFlow();
+    const { zoom } = useViewport();
+    const { fitView, zoomIn, zoomOut, setCenter } = useReactFlow();
     
+    const handleReset = () => {
+      const topNode = nodes.find(
+        (n) => n.type === 'topEvent' || n.data?.nodeType === 'topEvent'
+      );
+      if (topNode) {
+        // Center with 100% zoom, but offset center targeting downwards (+250px)
+        // to make the root Top Event reside beautifully at the upper center of viewport.
+        setCenter(
+          topNode.position.x + 100, 
+          topNode.position.y + 250, 
+          { zoom: 1, duration: 500 }
+        );
+      } else {
+        fitView({ duration: 500, padding: 0.2 });
+      }
+    };
+
     return (
       <div style={{ 
         display: 'flex', 
@@ -180,9 +197,9 @@ export default function FaultTreeCanvas({
         
         <button 
           className="btn btn--ghost btn--sm" 
-          onClick={() => setViewport({ x, y, zoom: 1 }, { duration: 400 })}
+          onClick={handleReset}
           style={{ fontSize: '11px' }}
-          title={locale === 'ja' ? '100%にリセット' : 'Reset to 100%'}
+          title={locale === 'ja' ? 'トップノードにフォーカス' : 'Focus on Top Node'}
         >
           Reset
         </button>
