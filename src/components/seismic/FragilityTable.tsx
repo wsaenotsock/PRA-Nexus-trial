@@ -119,8 +119,23 @@ export default function FragilityTable({ locale = 'ja' }: FragilityTableProps) {
                 alignItems: 'center'
               }}
             >
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-              <span style={{ fontSize: '10px', opacity: 0.7 }}>{f.type === 'discrete' ? 'Discrete' : `Am=${f.am}`}</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: '8px', flex: 1 }}>{f.name}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', flexShrink: 0, fontSize: '10px' }}>
+                {f.type === 'discrete' ? (
+                  <span style={{ opacity: 0.7 }}>Discrete</span>
+                ) : (
+                  <>
+                    <span style={{ 
+                      color: selectedId === f.id ? 'white' : '#3b82f6', 
+                      fontWeight: 600,
+                      opacity: selectedId === f.id ? 0.9 : 1
+                    }}>
+                      HCLPF={(f.am * Math.exp(-1.645 * ((f.betaR || 0) + (f.betaU || 0)))).toFixed(2)}
+                    </span>
+                    <span style={{ opacity: 0.6 }}>Am={f.am}</span>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -204,10 +219,21 @@ export default function FragilityTable({ locale = 'ja' }: FragilityTableProps) {
                       />
                       <small style={{ fontSize: '9px', color: 'var(--text-tertiary)' }}>不確実さ</small>
                     </div>
-                    <div style={{ marginTop: 'auto', padding: '10px', background: 'var(--bg-canvas)', borderRadius: '4px', fontSize: '10px', border: '1px solid var(--border-default)' }}>
-                      <div style={{ fontWeight: 600, marginBottom: '4px' }}>Composite βc:</div>
-                      <div style={{ fontSize: '14px', color: 'var(--accent-amber)', fontWeight: 'bold' }}>
-                        {Math.sqrt((selected.betaR || 0)**2 + (selected.betaU || 0)**2).toFixed(3)}
+                    <div style={{ marginTop: 'auto', padding: '12px', background: 'var(--bg-canvas)', borderRadius: '6px', border: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, marginBottom: '4px', fontSize: '10px' }}>Composite βc:</div>
+                        <div style={{ fontSize: '14px', color: 'var(--accent-amber)', fontWeight: 'bold' }}>
+                          {Math.sqrt((selected.betaR || 0)**2 + (selected.betaU || 0)**2).toFixed(3)}
+                        </div>
+                      </div>
+                      <div style={{ borderTop: '1px solid var(--border-default)', paddingTop: '10px' }}>
+                        <div style={{ fontWeight: 600, marginBottom: '4px', fontSize: '10px', color: 'var(--text-primary)' }}>HCLPF 容量 (g):</div>
+                        <div style={{ fontSize: '18px', color: '#3b82f6', fontWeight: 'bold' }}>
+                          {(selected.am * Math.exp(-1.645 * ((selected.betaR || 0) + (selected.betaU || 0)))).toFixed(3)}
+                        </div>
+                        <small style={{ fontSize: '9px', color: 'var(--text-tertiary)', marginTop: '2px', display: 'block' }}>
+                          {locale === 'ja' ? '95%信頼度での5%破損確率値' : 'High Confidence Low Probability of Failure'}
+                        </small>
                       </div>
                     </div>
                   </>
@@ -299,7 +325,15 @@ export default function FragilityTable({ locale = 'ja' }: FragilityTableProps) {
                         labelFormatter={(value: any) => `PGA: ${value}g`}
                       />
                       {selected.type !== 'discrete' && (
-                        <ReferenceLine x={selected.am} stroke="var(--accent-amber)" strokeDasharray="3 3" label={{ position: 'top', value: 'Am', fill: 'var(--accent-amber)', fontSize: 10 }} />
+                        <>
+                          <ReferenceLine x={selected.am} stroke="var(--accent-amber)" strokeDasharray="3 3" label={{ position: 'top', value: 'Am', fill: 'var(--accent-amber)', fontSize: 10 }} />
+                          <ReferenceLine 
+                            x={selected.am * Math.exp(-1.645 * ((selected.betaR || 0) + (selected.betaU || 0)))} 
+                            stroke="#3b82f6" 
+                            strokeDasharray="3 3" 
+                            label={{ position: 'top', value: 'HCLPF', fill: '#3b82f6', fontSize: 10 }} 
+                          />
+                        </>
                       )}
                       <Line 
                         type="monotone" 

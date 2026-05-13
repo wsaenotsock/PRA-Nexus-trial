@@ -194,7 +194,7 @@ export default function SeismicDashboard({ locale = 'ja' }: SeismicDashboardProp
                 ))}
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px' }}>
               <div className="form-group">
                 <label className="form-label">Min PGA (g)</label>
                 <input type="number" className="form-input" value={seismicSettings.minPGA} step="0.01" onChange={(e) => updateSeismicSettings({ minPGA: parseFloat(e.target.value) || 0 })} />
@@ -202,6 +202,18 @@ export default function SeismicDashboard({ locale = 'ja' }: SeismicDashboardProp
               <div className="form-group">
                 <label className="form-label">Max PGA (g)</label>
                 <input type="number" className="form-input" value={seismicSettings.maxPGA} step="0.1" onChange={(e) => updateSeismicSettings({ maxPGA: parseFloat(e.target.value) || 0 })} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">{locale === 'ja' ? '区間分割数' : 'Intervals'}</label>
+                <input 
+                  type="number" 
+                  className="form-input" 
+                  value={seismicSettings.intervals} 
+                  min={2}
+                  max={500}
+                  step="1" 
+                  onChange={(e) => updateSeismicSettings({ intervals: parseInt(e.target.value) || 20 })} 
+                />
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
