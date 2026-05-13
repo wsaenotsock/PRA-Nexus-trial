@@ -380,6 +380,9 @@ export default function FaultTreeCanvas({
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
+      const isCmdOrCtrl = event.ctrlKey || event.metaKey;
+
+      // 1. Delete
       if (event.key === 'Delete') {
         const selectedEdges = edgesState.filter((e) => e.selected);
         const selectedNodes = nodesState.filter((n) => n.selected);
@@ -392,8 +395,89 @@ export default function FaultTreeCanvas({
           onEdgeDeleteRequest(selectedEdges);
         }
       }
+
+      // 2. Copy (Ctrl + C)
+      if (isCmdOrCtrl && event.key.toLowerCase() === 'c') {
+        const selectedNode = nodesState.find((n) => n.selected);
+        if (selectedNode) {
+          event.preventDefault(); // Prevent native copying mechanisms
+          const nodeType = selectedNode.type || (selectedNode.data as any).nodeType;
+          setCopiedNodeId({ nodeId: selectedNode.id, nodeType });
+        }
+      }
+
+      // 3. Paste (Ctrl + V)
+      if (isCmdOrCtrl && event.key.toLowerCase() === 'v') {
+        if (!selectedFaultTreeId || !copiedNodeId) return;
+        event.preventDefault(); // Prevent native browser pasting behaviors
+
+        const ft = model.faultTrees.find((t) => t.id === selectedFaultTreeId);
+        if (!ft) return;
+
+        // Find selected node to determine if paste target is a gate
+        const selectedNode = nodesState.find((n) => n.selected);
+        const targetGateId = selectedNode && ['andGate', 'orGate', 'atleastGate', 'topEvent'].includes(selectedNode.type || (selectedNode.data as any).nodeType)
+          ? selectedNode.id
+          : null;
+
+        const { nodeId, nodeType } = copiedNodeId;
+        const newId = uuidv4();
+
+        if (['andGate', 'orGate', 'atleastGate', 'topEvent', 'transferGate'].includes(nodeType)) {
+          // Duplicate Gate Logic
+          let sourceGate = null;
+          for (const f of model.faultTrees) {
+            const g = f.gates.find((gate) => gate.id === nodeId);
+            if (g) {
+              sourceGate = g;
+              break;
+            }
+          }
+
+          if (sourceGate) {
+            let targetPosition = { x: sourceGate.position.x + 60, y: sourceGate.position.y + 60 };
+            if (targetGateId) {
+              const targetGate = ft.gates.find((g) => g.id === targetGateId);
+              if (targetGate) {
+                targetPosition = { x: targetGate.position.x, y: targetGate.position.y + 180 };
+              }
+            }
+
+            addGate(selectedFaultTreeId, {
+              ...sourceGate,
+              id: newId,
+              name: `${sourceGate.name} (Copy)`,
+              position: targetPosition,
+              children: [] 
+            });
+            
+            if (targetGateId) {
+              const targetGate = ft.gates.find((g) => g.id === targetGateId);
+              if (targetGate) {
+                updateGate(selectedFaultTreeId, {
+                  ...targetGate,
+                  children: [...targetGate.children, newId]
+                });
+              }
+            }
+          }
+        } else {
+          // Link Existing Basic Event / House Event / Undeveloped
+          if (model.basicEvents.some((e) => e.id === nodeId)) {
+            if (targetGateId) {
+              const targetGate = ft.gates.find((g) => g.id === targetGateId);
+              if (targetGate && !targetGate.children.includes(nodeId)) {
+                updateGate(selectedFaultTreeId, {
+                  ...targetGate,
+                  children: [...targetGate.children, nodeId]
+                });
+              }
+            }
+          }
+        }
+      }
     },
-    [edgesState, nodesState, onEdgeDeleteRequest]
+    [edgesState, nodesState, onEdgeDeleteRequest, selectedFaultTreeId, copiedNodeId, model, addGate, updateGate, setCopiedNodeId]
   );
 
   const onNodeDragStop = useCallback(
