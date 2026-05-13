@@ -9,13 +9,13 @@ function ANDGateSymbol() {
   return (
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
       <path
-        d="M 10 38 L 10 24 A 14 14 0 0 1 38 24 L 38 38 Z"
+        d="M 8 39 L 8 23 A 16 16 0 0 1 40 23 L 40 39 Z"
         fill="rgba(59, 130, 246, 0.12)"
         stroke="#3B82F6"
         strokeWidth="2"
         strokeLinejoin="round"
       />
-      <text x="24" y="30" textAnchor="middle" fill="#3B82F6" fontSize="11" fontWeight="700" fontFamily="Inter, sans-serif">AND</text>
+      <text x="24" y="31" textAnchor="middle" fill="#3B82F6" fontSize="10.5" fontWeight="700" fontFamily="Inter, sans-serif">AND</text>
     </svg>
   );
 }
@@ -25,13 +25,13 @@ function ORGateSymbol() {
   return (
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
       <path
-        d="M8 38C8 38 12 28 24 14C36 28 40 38 40 38C40 38 32 32 24 32C16 32 8 38 8 38Z"
+        d="M6 39C6 39 10 27 24 8C38 27 42 39 42 39C42 39 33 33 24 33C15 33 6 39 6 39Z"
         fill="rgba(168, 85, 247, 0.12)"
         stroke="#A855F7"
         strokeWidth="2"
         strokeLinejoin="round"
       />
-      <text x="24" y="30" textAnchor="middle" fill="#A855F7" fontSize="11" fontWeight="700" fontFamily="Inter, sans-serif">OR</text>
+      <text x="24" y="31" textAnchor="middle" fill="#A855F7" fontSize="10.5" fontWeight="700" fontFamily="Inter, sans-serif">OR</text>
     </svg>
   );
 }
@@ -41,13 +41,13 @@ function AtleastGateSymbol({ k }: { k?: number }) {
   return (
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
       <path
-        d="M 10 38 L 10 24 A 14 14 0 0 1 38 24 L 38 38 Z"
+        d="M 8 39 L 8 23 A 16 16 0 0 1 40 23 L 40 39 Z"
         fill="rgba(6, 182, 212, 0.12)"
         stroke="#06B6D4"
         strokeWidth="2"
         strokeLinejoin="round"
       />
-      <text x="24" y="30" textAnchor="middle" fill="#06B6D4" fontSize="10" fontWeight="700" fontFamily="Inter, sans-serif">{k ?? '?'}/N</text>
+      <text x="24" y="31" textAnchor="middle" fill="#06B6D4" fontSize="10" fontWeight="700" fontFamily="Inter, sans-serif">{k ?? '?'}/N</text>
     </svg>
   );
 }
@@ -69,7 +69,7 @@ function BasicEventSymbol({ failureType, hasParameter }: { failureType?: 'time' 
 
   return (
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-      <circle cx="24" cy="24" r="18" fill={bgColor} stroke={color} strokeWidth="2" />
+      <circle cx="24" cy="24" r="15" fill={bgColor} stroke={color} strokeWidth="2.5" />
     </svg>
   );
 }
@@ -79,7 +79,7 @@ function HouseEventSymbol() {
   return (
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
       <path
-        d="M24 8L40 22V40H8V22L24 8Z"
+        d="M24 10L38 23V38H10V23L24 10Z"
         fill="rgba(255, 176, 32, 0.12)"
         stroke="#FFB020"
         strokeWidth="2"
@@ -94,7 +94,7 @@ function TransferGateSymbol() {
   return (
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
       <path
-        d="M24 8L42 40H6L24 8Z"
+        d="M24 10L39 38H9L24 10Z"
         fill="rgba(6, 182, 212, 0.12)"
         stroke="#06B6D4"
         strokeWidth="2"
@@ -109,7 +109,7 @@ function UndevelopedSymbol() {
   return (
     <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
       <path
-        d="M24 6L42 24L24 42L6 24L24 6Z"
+        d="M24 9L39 24L24 39L9 24L24 9Z"
         fill="rgba(255, 71, 87, 0.12)"
         stroke="#FF4757"
         strokeWidth="2"

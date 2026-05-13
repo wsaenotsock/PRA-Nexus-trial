@@ -542,7 +542,12 @@ export default function Home() {
     <div className="app-layout">
       {/* ===== Header ===== */}
       <header className="app-header">
-        <div className="app-header__logo">
+        <div 
+          className="app-header__logo" 
+          onClick={() => window.open('/pitch', '_blank')}
+          style={{ cursor: 'pointer' }}
+          title={locale === 'ja' ? 'PRA Nexusの詳細を見る (新しいタブ)' : 'View PRA Nexus Details (New Tab)'}
+        >
           <div className="app-header__logo-icon">⚛</div>
           <span className="app-header__title">PRA Nexus</span>
           <span className="app-header__subtitle">

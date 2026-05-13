@@ -41,6 +41,14 @@ interface FaultTreeCanvasProps {
   locale?: 'ja' | 'en';
 }
 
+// Utility to resolve the actual model ID from unique React Flow render IDs (e.g., parentId::childId)
+const getRealId = (nodeId: string): string => {
+  if (nodeId.includes('::')) {
+    return nodeId.split('::')[1];
+  }
+  return nodeId;
+};
+
 export default function FaultTreeCanvas({ 
   onNodeSelect, 
   onNodeDeleteRequest, 
@@ -54,6 +62,7 @@ export default function FaultTreeCanvas({
   const model = useModelStore((s) => s.model);
   const selectedFaultTreeId = useModelStore((s) => s.selectedFaultTreeId);
   const [isLocked, setIsLocked] = useState(false);
+  const [viewMode, setViewMode] = useState<'tree' | 'network'>('tree'); // Add tree vs network view toggle
   const addBasicEvent = useModelStore((s) => s.addBasicEvent);
   const updateBasicEvent = useModelStore((s) => s.updateBasicEvent);
   const selectFaultTree = useModelStore((s) => s.selectFaultTree);
@@ -195,11 +204,32 @@ export default function FaultTreeCanvas({
           title={isLocked ? (locale === 'ja' ? 'ロック解除' : 'Unlock') : (locale === 'ja' ? '編集ロック' : 'Lock')}
           style={{ 
             fontSize: '14px', 
-            color: isLocked ? 'var(--accent-amber)' : 'var(--text-tertiary)',
+            color: isLocked ? 'var(--accent-amber)' : 'var(--accent-green)',
+            background: isLocked ? 'transparent' : 'rgba(16, 185, 129, 0.1)',
+            borderRadius: '4px',
             minWidth: '32px'
           }}
         >
           {isLocked ? '🔒' : '🔓'}
+        </button>
+
+        <div style={{ width: '1px', height: '16px', background: 'var(--border-default)', margin: '0 4px' }} />
+
+        <button 
+          className="btn btn--ghost btn--sm" 
+          onClick={() => setViewMode(viewMode === 'tree' ? 'network' : 'tree')}
+          title={viewMode === 'tree' ? (locale === 'ja' ? 'ネットワーク型描画に切替' : 'Switch to Network View') : (locale === 'ja' ? 'ツリー型描画に切替' : 'Switch to Tree View')}
+          style={{ 
+            fontSize: '11px', 
+            color: viewMode === 'tree' ? 'var(--accent-blue)' : 'var(--accent-green)',
+            fontWeight: 'bold',
+            padding: '4px 8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}
+        >
+          {viewMode === 'tree' ? '🌲 Tree' : '🕸️ Net'}
         </button>
       </div>
     );
@@ -223,12 +253,12 @@ export default function FaultTreeCanvas({
       model.faultTrees?.flatMap(t => t.gates).flatMap(g => g.children) || []
     );
 
-    const processNode = (nodeId: string) => {
-      if (processedNodes.has(nodeId)) return;
-      processedNodes.add(nodeId);
-
+    const processNode = (nodeId: string, parentId?: string) => {
       const gate = ft.gates.find((g) => g.id === nodeId);
       if (gate) {
+        if (processedNodes.has(nodeId)) return;
+        processedNodes.add(nodeId);
+
         const isTopGate = gate.id === ft.topGateId;
         let flowNodeType: FTNodeType = 'andGate';
         if (isTopGate) flowNodeType = 'topEvent';
@@ -236,12 +266,24 @@ export default function FaultTreeCanvas({
         else if (gate.type === 'ATLEAST' || gate.type === 'VOTE') flowNodeType = 'atleastGate';
         else if (gate.type === 'TRANSFER') flowNodeType = 'transferGate';
         
+        let resolvedGatePosition = gate.position;
+        if (viewMode === 'tree' && parentId) {
+          const parentGate = ft.gates.find(g => g.id === parentId);
+          if (parentGate) {
+            resolvedGatePosition = {
+              x: gate.position.x,
+              y: parentGate.position.y + 220
+            };
+          }
+        }
+
         nodes.push({
           id: gate.id,
           type: flowNodeType,
-          position: gate.position,
+          position: resolvedGatePosition,
           width: 200,
           height: 120,
+          origin: [0.5, 0],
           data: {
             label: gate.name,
             nodeType: flowNodeType,
@@ -256,29 +298,73 @@ export default function FaultTreeCanvas({
         if (gate.collapsed) return;
 
         for (const childId of gate.children) {
+          const isChildGate = ft.gates.some((g) => g.id === childId);
+          // Basic events get composite ID ONLY in Tree mode. In Network mode, they use the original ID.
+          const renderChildId = (isChildGate || viewMode === 'network') ? childId : `${gate.id}::${childId}`;
+
           edges.push({
-            id: `${gate.id}-${childId}`,
+            id: `${gate.id}-${renderChildId}`,
             source: gate.id,
-            target: childId,
+            target: renderChildId,
             type: 'smoothstep',
             interactionWidth: 20,
             style: { stroke: 'var(--text-tertiary)', strokeWidth: 2 },
           });
-          processNode(childId);
+          processNode(childId, gate.id);
         }
       } else {
+        // In network mode, basic events are deduplicated globally on traversal
+        if (viewMode === 'network') {
+          if (processedNodes.has(nodeId)) return;
+          processedNodes.add(nodeId);
+        }
+
         const be = model.basicEvents.find((e) => e.id === nodeId);
         if (be) {
+          // Compose visual unique ID in tree mode, otherwise use the actual basic event ID
+          const renderId = (viewMode === 'tree' && parentId) ? `${parentId}::${nodeId}` : nodeId;
+          
+          // DYNAMIC AUTO-SPACING:
+          // In tree mode, we fully auto-align basic events centered right beneath their parent gate.
+          // This instantly fixes overlapping on view mode toggle, and makes children naturally
+          // follow their parent gates like a real fault tree tool.
+          let resolvedPosition = be.position || { x: 0, y: 0 };
+          let isDraggable = !isLocked;
+
+          if (viewMode === 'tree' && parentId) {
+            const parentGate = ft.gates.find(g => g.id === parentId);
+            if (parentGate) {
+              const childIndex = parentGate.children.indexOf(nodeId);
+              const totalChildren = parentGate.children.length;
+              
+              // Calculate centered horizontal offset (220px spacing matching visual width)
+              const spacing = 220;
+              const offsetX = (childIndex - (totalChildren - 1) / 2) * spacing;
+              
+              resolvedPosition = {
+                x: parentGate.position.x + offsetX,
+                y: parentGate.position.y + 220 // Visual depth height matching autoLayout nodeHeight
+              };
+              
+              // Let user drag single items even in tree mode if lock is released. 
+              // Upon release, the node will automatically snap back to maintain structural integrity.
+              // isDraggable = false;
+            }
+          }
+
           const resolvedNodeType = be.eventType || 'basicEvent';
           const isCCF = (model.ccfGroups || []).some(g => g.members.includes(be.id));
           const param = (model.parameters || []).find((p) => p.id === be.parameterId);
           const parameterName = param ? param.name : undefined;
+          
           nodes.push({
-            id: be.id,
-            type: resolvedNodeType, // Pass the correct event type so FTNode renders the right shape
-            position: be.position || { x: 0, y: 0 },
+            id: renderId,
+            type: resolvedNodeType, 
+            position: resolvedPosition,
             width: 200,
             height: 120,
+            origin: [0.5, 0],
+            draggable: isDraggable,
             data: {
               label: be.name,
               nodeType: resolvedNodeType,
@@ -288,8 +374,8 @@ export default function FaultTreeCanvas({
               parameterId: be.parameterId,
               parameterName,
               isCCF,
-              isDropTarget: dragOverNodeId === be.id,
-              id: be.id,
+              isDropTarget: dragOverNodeId === renderId,
+              id: be.id, // Holds true model ID
             },
           });
         }
@@ -306,7 +392,7 @@ export default function FaultTreeCanvas({
     roots.forEach(rootId => processNode(rootId));
 
     return { nodes, edges };
-  }, [selectedFaultTreeId, model, dragOverNodeId]);
+  }, [selectedFaultTreeId, model, dragOverNodeId, viewMode]);
 
   const [nodesState, setNodes, onNodesChange] = useNodesState(nodes);
   const [edgesState, setEdges, onEdgesChange] = useEdgesState(edges);
@@ -341,8 +427,9 @@ export default function FaultTreeCanvas({
       if (selectedFaultTreeId && params.source && params.target) {
         const ft = model.faultTrees.find((t) => t.id === selectedFaultTreeId);
         const parentGate = ft?.gates.find((g) => g.id === params.source);
-        if (parentGate && !parentGate.children.includes(params.target)) {
-          const updatedGate = { ...parentGate, children: [...parentGate.children, params.target] };
+        const targetRealId = getRealId(params.target);
+        if (parentGate && !parentGate.children.includes(targetRealId)) {
+          const updatedGate = { ...parentGate, children: [...parentGate.children, targetRealId] };
           useModelStore.getState().updateGate(selectedFaultTreeId, updatedGate);
         }
       }
@@ -352,7 +439,7 @@ export default function FaultTreeCanvas({
 
   const onNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
-      onNodeSelect(node.id, (node.data as FTNodeData).nodeType);
+      onNodeSelect(getRealId(node.id), (node.data as FTNodeData).nodeType);
     },
     [onNodeSelect]
   );
@@ -362,7 +449,7 @@ export default function FaultTreeCanvas({
       const data = node.data as FTNodeData;
       const isGate = ['andGate', 'orGate', 'atleastGate', 'topEvent'].includes(data.nodeType);
       if (selectedFaultTreeId && isGate) {
-        toggleGateCollapse(selectedFaultTreeId, node.id);
+        toggleGateCollapse(selectedFaultTreeId, getRealId(node.id));
       }
     },
     [selectedFaultTreeId, toggleGateCollapse]
@@ -372,7 +459,7 @@ export default function FaultTreeCanvas({
     (edgesToDelete: Edge[]) => {
       if (!selectedFaultTreeId) return;
       edgesToDelete.forEach((edge) => {
-        removeChildFromGate(selectedFaultTreeId, edge.source, edge.target);
+        removeChildFromGate(selectedFaultTreeId, edge.source, getRealId(edge.target));
       });
     },
     [selectedFaultTreeId, removeChildFromGate]
@@ -384,6 +471,11 @@ export default function FaultTreeCanvas({
     targetGateId: string | null
   ) => {
     if (!selectedFaultTreeId) return;
+    
+    // Ensure we resolve the real underlying model UUID immediately
+    const realSourceNodeId = getRealId(sourceNodeId);
+    const realTargetGateId = targetGateId ? getRealId(targetGateId) : null;
+
     const ft = model.faultTrees.find(t => t.id === selectedFaultTreeId);
     if (!ft) return;
 
@@ -392,7 +484,7 @@ export default function FaultTreeCanvas({
       let sourceGate = null;
       let sourceFtId = null;
       for (const f of model.faultTrees) {
-        const g = f.gates.find((gate) => gate.id === sourceNodeId);
+        const g = f.gates.find((gate) => gate.id === realSourceNodeId);
         if (g) {
           sourceGate = g;
           sourceFtId = f.id;
@@ -406,12 +498,12 @@ export default function FaultTreeCanvas({
 
         // Calculate unified position offset to maintain visual structure
         let offset = { x: 60, y: 60 };
-        if (targetGateId) {
-          const targetGate = ft.gates.find(g => g.id === targetGateId);
+        if (realTargetGateId) {
+          const targetGate = ft.gates.find(g => g.id === realTargetGateId);
           if (targetGate) {
             offset = {
               x: targetGate.position.x - sourceGate.position.x,
-              y: targetGate.position.y + 180 - sourceGate.position.y
+              y: targetGate.position.y + 220 - sourceGate.position.y
             };
           }
         }
@@ -442,7 +534,7 @@ export default function FaultTreeCanvas({
           addGate(selectedFaultTreeId, {
             ...originalGate,
             id: nextNewGateId,
-            name: currentGateId === sourceNodeId ? `${originalGate.name} (Copy)` : originalGate.name,
+            name: currentGateId === realSourceNodeId ? `${originalGate.name} (Copy)` : originalGate.name,
             position: {
               x: originalGate.position.x + offset.x,
               y: originalGate.position.y + offset.y
@@ -454,11 +546,11 @@ export default function FaultTreeCanvas({
         };
 
         // Begin cloning at the root of copied gate
-        const newRootGateId = cloneSubtree(sourceNodeId);
+        const newRootGateId = cloneSubtree(realSourceNodeId);
 
         // Link the new cloned root under target parent gate if present
-        if (targetGateId && newRootGateId) {
-          const targetGate = ft.gates.find(g => g.id === targetGateId);
+        if (realTargetGateId && newRootGateId) {
+          const targetGate = ft.gates.find(g => g.id === realTargetGateId);
           if (targetGate) {
             updateGate(selectedFaultTreeId, {
               ...targetGate,
@@ -469,12 +561,12 @@ export default function FaultTreeCanvas({
       }
     } else {
       // Shared reference paste of a basic event (only if pasting onto a target gate)
-      if (targetGateId && model.basicEvents.some(e => e.id === sourceNodeId)) {
-        const targetGate = ft.gates.find(g => g.id === targetGateId);
-        if (targetGate && !targetGate.children.includes(sourceNodeId)) {
+      if (realTargetGateId && model.basicEvents.some(e => e.id === realSourceNodeId)) {
+        const targetGate = ft.gates.find(g => g.id === realTargetGateId);
+        if (targetGate && !targetGate.children.includes(realSourceNodeId)) {
           updateGate(selectedFaultTreeId, {
             ...targetGate,
-            children: [...targetGate.children, sourceNodeId]
+            children: [...targetGate.children, realSourceNodeId]
           });
         }
       }
@@ -505,7 +597,7 @@ export default function FaultTreeCanvas({
         if (selectedNode) {
           event.preventDefault(); // Prevent native copying mechanisms
           const nodeType = selectedNode.type || (selectedNode.data as any).nodeType;
-          setCopiedNodeId({ nodeId: selectedNode.id, nodeType });
+          setCopiedNodeId({ nodeId: getRealId(selectedNode.id), nodeType });
         }
       }
 
@@ -531,13 +623,19 @@ export default function FaultTreeCanvas({
       // 1. Save position
       if (!selectedFaultTreeId) return;
       const ft = model.faultTrees?.find((t) => t.id === selectedFaultTreeId);
-      const gate = ft?.gates.find((g) => g.id === node.id);
+      
+      const realNodeId = getRealId(node.id);
+      const gate = ft?.gates.find((g) => g.id === realNodeId);
       if (gate) {
         updateGate(selectedFaultTreeId, { ...gate, position: node.position });
       } else {
-        const be = model.basicEvents.find((e) => e.id === node.id);
+        const be = model.basicEvents.find((e) => e.id === realNodeId);
         if (be) {
-          updateBasicEvent({ ...be, position: node.position });
+          // Only overwrite model shared position in Network Mode.
+          // In Tree Mode, letting store persist a single position would collapse all visuals together.
+          if (viewMode === 'network') {
+            updateBasicEvent({ ...be, position: node.position });
+          }
         }
       }
 
@@ -548,17 +646,17 @@ export default function FaultTreeCanvas({
           // Find old parent gate and remove connection to keep connection line single
           const currentFt = model.faultTrees?.find((t) => t.id === selectedFaultTreeId);
           if (currentFt) {
-            const oldParent = currentFt.gates.find((g) => g.children.includes(node.id));
+            const oldParent = currentFt.gates.find((g) => g.children.includes(realNodeId));
             if (oldParent && oldParent.id !== dragOverNodeId) {
-              removeChildFromGate(selectedFaultTreeId, oldParent.id, node.id);
+              removeChildFromGate(selectedFaultTreeId, oldParent.id, realNodeId);
             }
           }
-          addChildToGate(selectedFaultTreeId, dragOverNodeId, node.id);
+          addChildToGate(selectedFaultTreeId, dragOverNodeId, realNodeId);
         }
       }
       setDragOverNodeId(null);
     },
-    [selectedFaultTreeId, model, updateGate, updateBasicEvent, dragOverNodeId, nodes, addChildToGate, removeChildFromGate]
+    [selectedFaultTreeId, model, updateGate, updateBasicEvent, dragOverNodeId, nodes, addChildToGate, removeChildFromGate, viewMode]
   );
 
   const onInit = useCallback((instance: ReactFlowInstance<Node<FTNodeData>, Edge>) => {
@@ -603,7 +701,7 @@ export default function FaultTreeCanvas({
         distribution: { type: 'lognormal', mean: 1e-4, errorFactor: 3 },
         source: '',
         memo: '',
-        position: { x: gate.position.x, y: gate.position.y + 200 },
+        position: { x: gate.position.x, y: gate.position.y + 220 },
       };
       addBasicEvent(newEvent);
 
@@ -616,6 +714,7 @@ export default function FaultTreeCanvas({
   const handleInsertGateAbove = useCallback(() => {
     if (!contextMenu || !selectedFaultTreeId) return;
     const nodeId = contextMenu.nodeId;
+    const realNodeId = getRealId(nodeId);
     
     const faultTree = model.faultTrees.find((ft) => ft.id === selectedFaultTreeId);
     if (!faultTree) return;
@@ -624,12 +723,12 @@ export default function FaultTreeCanvas({
     let currentPosition = { x: 0, y: 0 };
     let isBasicEvent = false;
     
-    const be = model.basicEvents.find((e) => e.id === nodeId);
+    const be = model.basicEvents.find((e) => e.id === realNodeId);
     if (be) {
       currentPosition = be.position || { x: 0, y: 0 };
       isBasicEvent = true;
     } else {
-      const gate = faultTree.gates.find((g) => g.id === nodeId);
+      const gate = faultTree.gates.find((g) => g.id === realNodeId);
       if (gate) {
         currentPosition = gate.position;
       } else {
@@ -638,7 +737,14 @@ export default function FaultTreeCanvas({
     }
     
     // 2. Find parent gate of the target node in the active FT
-    const parentGate = faultTree.gates.find((g) => g.children.includes(nodeId));
+    let parentGate = nodeId.includes('::') 
+      ? faultTree.gates.find(g => g.id === nodeId.split('::')[0]) 
+      : null;
+
+    if (!parentGate) {
+      parentGate = faultTree.gates.find((g) => g.children.includes(realNodeId));
+    }
+
     if (!parentGate) {
       alert(locale === 'ja' ? '挿入先となる親ゲートが見つかりませんでした。' : 'Parent gate not found.');
       setContextMenu(null);
@@ -650,7 +756,7 @@ export default function FaultTreeCanvas({
       id: newGateId,
       name: locale === 'ja' ? '新規ORゲート' : 'New OR Gate',
       type: 'OR' as any,
-      children: [nodeId],
+      children: [realNodeId],
       position: { x: currentPosition.x, y: Math.max(currentPosition.y - 100, parentGate.position.y + 30) },
     };
 
@@ -660,7 +766,7 @@ export default function FaultTreeCanvas({
     // 2. Replace target node ID with the new gate ID in the parent's children
     const updatedParentGate = {
       ...parentGate,
-      children: parentGate.children.map((cid) => (cid === nodeId ? newGateId : cid)),
+      children: parentGate.children.map((cid) => (cid === realNodeId ? newGateId : cid)),
     };
     updateGate(selectedFaultTreeId, updatedParentGate);
 
@@ -671,7 +777,7 @@ export default function FaultTreeCanvas({
         position: { x: (be.position?.x || 0), y: (be.position?.y || 0) + 100 },
       });
     } else {
-      const targetGate = faultTree.gates.find((g) => g.id === nodeId);
+      const targetGate = faultTree.gates.find((g) => g.id === realNodeId);
       if (targetGate) {
         updateGate(selectedFaultTreeId, {
           ...targetGate,
@@ -686,18 +792,26 @@ export default function FaultTreeCanvas({
   const handleInsertSibling = useCallback((insertType: 'basicEvent' | 'gate') => {
     if (!contextMenu || !selectedFaultTreeId) return;
     const nodeId = contextMenu.nodeId;
+    const realNodeId = getRealId(nodeId);
     const ft = model.faultTrees.find(t => t.id === selectedFaultTreeId);
     if (!ft) return;
 
     let currentPosition = { x: 0, y: 0 };
-    const targetBe = model.basicEvents.find(e => e.id === nodeId);
-    const targetGate = ft.gates.find(g => g.id === nodeId);
+    const targetBe = model.basicEvents.find(e => e.id === realNodeId);
+    const targetGate = ft.gates.find(g => g.id === realNodeId);
     
     if (targetBe) currentPosition = targetBe.position || { x: 0, y: 0 };
     else if (targetGate) currentPosition = targetGate.position;
     else return;
 
-    const parentGate = ft.gates.find(g => g.children.includes(nodeId));
+    let parentGate = nodeId.includes('::') 
+      ? ft.gates.find(g => g.id === nodeId.split('::')[0]) 
+      : null;
+
+    if (!parentGate) {
+      parentGate = ft.gates.find(g => g.children.includes(realNodeId));
+    }
+
     const newId = uuidv4();
     const newPos = { x: currentPosition.x + 250, y: currentPosition.y };
 
@@ -727,7 +841,7 @@ export default function FaultTreeCanvas({
     }
 
     if (parentGate) {
-      const childIdx = parentGate.children.indexOf(nodeId);
+      const childIdx = parentGate.children.indexOf(realNodeId);
       const newChildren = [...parentGate.children];
       newChildren.splice(childIdx + 1, 0, newId);
       updateGate(selectedFaultTreeId, {
@@ -740,13 +854,13 @@ export default function FaultTreeCanvas({
 
   const handleDeleteNode = useCallback((nodeId: string, nodeType: string) => {
     if (onNodeDeleteRequest) {
-      onNodeDeleteRequest(nodeId, nodeType);
+      onNodeDeleteRequest(getRealId(nodeId), nodeType);
     }
     setContextMenu(null);
   }, [onNodeDeleteRequest]);
 
   const handleCopyNode = useCallback((nodeId: string, nodeType: string) => {
-    setCopiedNodeId({ nodeId, nodeType });
+    setCopiedNodeId({ nodeId: getRealId(nodeId), nodeType });
     setContextMenu(null);
   }, []);
 
@@ -775,19 +889,57 @@ export default function FaultTreeCanvas({
 
   const onNodeDrag = useCallback(
     (event: React.MouseEvent, node: Node) => {
+      // 1. Existing drop-target detection logic for nested gate dragging
       const elements = document.elementsFromPoint(event.clientX, event.clientY);
       const targetNodeElement = elements.find(
         (el) => el.classList.contains('react-flow__node') && el.getAttribute('data-id') !== node.id
       );
       const targetId = targetNodeElement?.getAttribute('data-id') || null;
 
-      // Only highlight if the target is a gate
       const targetNode = nodes.find((n) => n.id === targetId);
-      const isGate = targetNode && ['andGate', 'orGate', 'atleastGate', 'topEvent'].includes(targetNode.data.nodeType);
+      const isGateOver = targetNode && ['andGate', 'orGate', 'atleastGate', 'topEvent'].includes(targetNode.data.nodeType);
 
-      setDragOverNodeId(isGate ? targetId : null);
+      setDragOverNodeId(isGateOver ? targetId : null);
+
+      // 2. PREMIUM REAL-TIME CHILD TRACKING (IN TREE MODE)
+      // Ensures basic events remain perfectly stuck directly underneath their parent gates during active drag gestures.
+      if (viewMode === 'tree' && selectedFaultTreeId) {
+        const isDraggedGate = ['andGate', 'orGate', 'atleastGate', 'topEvent'].includes(node.type || (node.data as any)?.nodeType || '');
+        
+        if (isDraggedGate) {
+          const draggedGateId = node.id;
+          const ft = model.faultTrees?.find((t) => t.id === selectedFaultTreeId);
+          const parentGate = ft?.gates.find((g) => g.id === draggedGateId);
+          
+          if (parentGate && parentGate.children.length > 0) {
+            setNodes((nds) =>
+              nds.map((n) => {
+                // If this visual node represents a basic event strictly mapped under the moving gate, shift it
+                if (n.id.startsWith(`${draggedGateId}::`)) {
+                  const realId = getRealId(n.id);
+                  const childIndex = parentGate.children.indexOf(realId);
+                  const totalChildren = parentGate.children.length;
+                  
+                  if (childIndex > -1) {
+                    const spacing = 220;
+                    const offsetX = (childIndex - (totalChildren - 1) / 2) * spacing;
+                    return {
+                      ...n,
+                      position: {
+                        x: node.position.x + offsetX,
+                        y: node.position.y + 220
+                      }
+                    };
+                  }
+                }
+                return n;
+              })
+            );
+          }
+        }
+      }
     },
-    [nodes]
+    [nodes, viewMode, selectedFaultTreeId, model, setNodes]
   );
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -831,7 +983,7 @@ export default function FaultTreeCanvas({
       if (parentGateId) {
         const parentGate = ft.gates.find(g => g.id === parentGateId);
         if (parentGate) {
-          finalPosition = { x: parentGate.position.x, y: parentGate.position.y + 150 };
+          finalPosition = { x: parentGate.position.x, y: parentGate.position.y + 220 };
         }
       }
 
@@ -1124,6 +1276,7 @@ export default function FaultTreeCanvas({
         edges={edgesState}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        nodeOrigin={[0.5, 0]}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         onNodeDoubleClick={onNodeDoubleClick}

@@ -1800,41 +1800,81 @@ export const useModelStore = create<ModelState>((set, get) => ({
     const ft = model.faultTrees.find(f => f.id === faultTreeId);
     if (!ft) return;
 
-    // Use d3-hierarchy for tree layout
-    // We treat it as a tree starting from topGateId
-    // If a node is shared, it will appear multiple times in the hierarchy but we only update its position once (or use the last one)
-
+    // 1. Build an absolute index of all current nodes
     const nodesMap = new Map<string, any>();
     ft.gates.forEach(g => nodesMap.set(g.id, { ...g, type: 'gate' }));
     model.basicEvents.forEach(be => nodesMap.set(be.id, { ...be, type: 'basicEvent' }));
 
-    const buildHierarchy = (id: string) => {
-      const node = nodesMap.get(id);
+    // 2. Determine true roots (forest layout) by collecting all child IDs
+    const allChildIds = new Set<string>();
+    ft.gates.forEach(g => g.children.forEach(cid => allChildIds.add(cid)));
+
+    // All gates that do not have a parent gate (orphans and the top node)
+    const roots = ft.gates.filter(g => !allChildIds.has(g.id));
+    
+    // Prioritize top event to be the leftmost/centered principal root
+    const mainRootIndex = roots.findIndex(r => r.id === ft.topGateId);
+    if (mainRootIndex > -1) {
+      const [main] = roots.splice(mainRootIndex, 1);
+      roots.unshift(main);
+    }
+
+    // 3. Build strict D3 hierarchy using unique traversal keys to accurately preserve spacing and widths.
+    let globalCounter = 0;
+    const buildHierarchy = (nodeId: string, parentPath = ''): any => {
+      const node = nodesMap.get(nodeId);
       if (!node) return null;
+
+      const currentPath = parentPath ? `${parentPath}->${nodeId}` : nodeId;
       const childrenIds = node.type === 'gate' ? node.children : [];
+
       return {
-        id: node.id,
+        id: nodeId,
+        uniqueId: `${currentPath}-${globalCounter++}`, // Crucial for correct duplicate width math in d3.tree
         name: node.name,
-        children: childrenIds.map((childId: string) => buildHierarchy(childId)).filter(Boolean)
+        type: node.type,
+        children: childrenIds.map((cid: string) => buildHierarchy(cid, currentPath)).filter(Boolean)
       };
     };
 
-    const rootData = buildHierarchy(ft.topGateId);
-    if (!rootData) return;
+    // 4. Construct super root to seamlessly layout detached sub-trees horizontally without overlaps.
+    const superRootData = {
+      id: 'SUPER_ROOT',
+      uniqueId: 'SUPER_ROOT',
+      name: 'SUPER_ROOT',
+      type: 'dummy',
+      children: roots.map(r => buildHierarchy(r.id)).filter(Boolean)
+    };
 
-    const root = d3.hierarchy(rootData);
+    const rootNode = d3.hierarchy(superRootData);
 
-    // Layout settings
-    const nodeWidth = 240;
-    const nodeHeight = 200;
+    // 5. Configure D3 tree spacing layout
+    const nodeWidth = 240;  // Generous horizontal spacing between nodes
+    const nodeHeight = 220; // Generous vertical spacing depth
     const treeLayout = d3.tree<any>().nodeSize([nodeWidth, nodeHeight]);
-    treeLayout(root);
+    treeLayout(rootNode);
 
-    const newPositions = new Map<string, { x: number, y: number }>();
-    root.descendants().forEach((d: any) => {
-      newPositions.set(d.data.id, { x: d.x + 400, y: d.y + 50 });
+    // 6. Record optimal coordinate maps
+    const newGatePositions = new Map<string, { x: number, y: number }>();
+    const newBEPositions = new Map<string, { x: number, y: number }>();
+
+    rootNode.descendants().forEach((d: any) => {
+      if (d.data.id === 'SUPER_ROOT') return;
+
+      // Apply layout base offset and extract calculated points
+      const finalPos = { x: d.x + 400, y: d.y + 50 };
+      const type = d.data.type;
+
+      if (type === 'gate') {
+        if (!newGatePositions.has(d.data.id)) {
+          newGatePositions.set(d.data.id, finalPos);
+        }
+      } else if (type === 'basicEvent') {
+        newBEPositions.set(d.data.id, finalPos);
+      }
     });
 
+    // 7. Synchronize to model store
     set((state) => ({
       model: {
         ...state.model,
@@ -1844,14 +1884,14 @@ export const useModelStore = create<ModelState>((set, get) => ({
               ...f,
               gates: f.gates.map((g) => ({
                 ...g,
-                position: newPositions.get(g.id) || g.position
+                position: newGatePositions.get(g.id) || g.position
               }))
             }
             : f
         ),
         basicEvents: state.model.basicEvents.map((be) => ({
           ...be,
-          position: newPositions.get(be.id) || (be as any).position || { x: 0, y: 0 }
+          position: newBEPositions.get(be.id) || (be as any).position || { x: 0, y: 0 }
         })),
         updatedAt: new Date().toISOString(),
       },
