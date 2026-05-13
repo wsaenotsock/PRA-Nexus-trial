@@ -344,12 +344,26 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
           <div className="stat-card__sub">{locale === 'ja' ? '計算処理時間' : 'Execution Time'}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-card__label">{locale === 'ja' ? '解析手法 / カットオフ' : 'Method / Cut-off'}</div>
+          <div className="stat-card__label">{locale === 'ja' ? '解析手法 / 条件設定' : 'Method / Settings'}</div>
           <div className="stat-card__value" style={{ fontSize: '18px', color: 'var(--text-secondary)' }}>
             {result.method.toUpperCase().replace('_', ' ')}
           </div>
-          <div className="stat-card__sub">
-            Cut-off: {result.cutoff?.toExponential(1) || 'None'}
+          <div className="stat-card__sub" style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Pruning:</span>
+              <span style={{ fontWeight: 500, color: result.enablePruning === false ? 'var(--text-muted)' : 'inherit' }}>
+                {result.enablePruning === false 
+                  ? (locale === 'ja' ? '無効' : 'Disabled') 
+                  : (result.bddCutOff !== undefined 
+                      ? result.bddCutOff.toExponential(1) 
+                      : (model.quantificationSettings?.bddCutOff || 1e-20).toExponential(1))
+                }
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Cut-off:</span>
+              <span style={{ fontWeight: 500 }}>{result.cutoff?.toExponential(1) || 'None'}</span>
+            </div>
           </div>
         </div>
       </div>

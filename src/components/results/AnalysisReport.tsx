@@ -223,11 +223,24 @@ export default function AnalysisReport({
                 <div style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a' }}>{result.method.toUpperCase().replace('_', ' ')}</div>
               </div>
             </div>
-            <div style={{ fontSize: '12px', color: '#666', background: '#fff', border: '1px solid #eee', padding: '10px', borderRadius: '6px' }}>
-              <strong>{locale === 'ja' ? 'カットオフ設定' : 'Cut-off Threshold'}:</strong> {result.cutoff?.toExponential(1) || 'None'}
-              <span style={{ marginLeft: '20px' }}>
-                <strong>{locale === 'ja' ? '計算時間' : 'Compute Time'}:</strong> {formatDuration(result.computeTimeMs)}
-              </span>
+            <div style={{ fontSize: '12px', color: '#666', background: '#fff', border: '1px solid #eee', padding: '10px', borderRadius: '6px', display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+              <div>
+                <strong>Pruning:</strong>{' '}
+                {result.enablePruning === false 
+                  ? (locale === 'ja' ? '無効' : 'Disabled') 
+                  : (result.bddCutOff !== undefined 
+                      ? result.bddCutOff.toExponential(1) 
+                      : (model.quantificationSettings?.bddCutOff || 1e-20).toExponential(1))
+                }
+              </div>
+              <div>
+                <strong>{locale === 'ja' ? 'カットオフ' : 'Cut-off'}:</strong>{' '}
+                {result.cutoff?.toExponential(1) || 'None'}
+              </div>
+              <div>
+                <strong>{locale === 'ja' ? '計算時間' : 'Compute Time'}:</strong>{' '}
+                {formatDuration(result.computeTimeMs)}
+              </div>
             </div>
           </section>
         )}

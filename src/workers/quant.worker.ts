@@ -39,6 +39,8 @@ self.onmessage = async (e: MessageEvent) => {
           approxMethod
         );
         res.cutoff = cutoffValue;
+        res.bddCutOff = model.quantificationSettings?.bddCutOff ?? 1e-20;
+        res.enablePruning = model.quantificationSettings?.enablePruning !== false;
         currentResult = res;
         self.postMessage({ id, type: 'SUCCESS', result: cleanResult(res) });
         break;
@@ -56,6 +58,8 @@ self.onmessage = async (e: MessageEvent) => {
           : (approxSetting ?? 'bdd_exact');
         const res = quantifyEventTree(et, model, approxMethod as any);
         res.cutoff = model.quantificationSettings?.cutOff;
+        res.bddCutOff = model.quantificationSettings?.bddCutOff ?? 1e-20;
+        res.enablePruning = model.quantificationSettings?.enablePruning !== false;
         currentResult = res;
         self.postMessage({ id, type: 'SUCCESS', result: cleanResult(res) });
         break;

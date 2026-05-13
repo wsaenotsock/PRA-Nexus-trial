@@ -302,6 +302,8 @@ export interface QuantificationResult {
   baseProbabilities?: Record<string, number>; // Added for sensitivity analysis
   uncertainty?: any; // Monte Carlo result
   cutoff?: number;
+  bddCutOff?: number;
+  enablePruning?: boolean;
 }
 
 // ===== Editor Node Types (React Flow) =====
