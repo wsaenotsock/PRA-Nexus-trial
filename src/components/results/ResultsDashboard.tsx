@@ -348,9 +348,9 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
           <div className="stat-card__value" style={{ fontSize: '18px', color: 'var(--text-secondary)' }}>
             {result.method.toUpperCase().replace('_', ' ')}
           </div>
-          <div className="stat-card__sub" style={{ display: 'flex', flexDirection: 'column', gap: '2px', width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Pruning:</span>
+          <div className="stat-card__sub" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+            <div>
+              <span>Pruning:{' '}</span>
               <span style={{ fontWeight: 500, color: result.enablePruning === false ? 'var(--text-muted)' : 'inherit' }}>
                 {result.enablePruning === false 
                   ? (locale === 'ja' ? '無効' : 'Disabled') 
@@ -360,8 +360,8 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
                 }
               </span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Cut-off:</span>
+            <div>
+              <span>Cut-off:{' '}</span>
               <span style={{ fontWeight: 500 }}>{result.cutoff?.toExponential(1) || 'None'}</span>
             </div>
           </div>
