@@ -11,6 +11,8 @@ import {
   ResponsiveContainer,
   ReferenceLine
 } from 'recharts';
+import { QuanticaLogo } from '@/components/brand/QuanticaLogo';
+
 
 // 地震ハザード曲線のダミーデータ (PGA vs 年超過頻度)
 const seismicData = [
@@ -103,7 +105,9 @@ export default function PitchPage() {
       {/* ヘッダーエリア */}
       <header className="pitch-header">
         <div className="pitch-header__logo">
-          <span className="pitch-header__logo-icon">N</span>
+          <span className="pitch-header__logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', padding: 0, border: 'none', boxShadow: 'none' }}>
+            <QuanticaLogo size={26} />
+          </span>
           <span className="pitch-header__logo-text">Quantica Risk</span>
           <span className="pitch-header__badge">PITCH DECK</span>
         </div>
@@ -117,6 +121,9 @@ export default function PitchPage() {
         {/* スライド1: 表紙 */}
         {currentSlide === 0 && (
           <div className="slide slide--lead fade-in">
+            <div className="cover-logo" style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              <QuanticaLogo size={96} style={{ filter: 'drop-shadow(0 0 12px rgba(52, 152, 219, 0.3))' }} />
+            </div>
             <div className="scratch-badge">100% インハウス・フルスクラッチ開発</div>
             <h1 className="main-title">
               Quantica Risk
@@ -504,6 +511,9 @@ export default function PitchPage() {
         {/* スライド10: 結び（デジタル変革） */}
         {currentSlide === 9 && (
           <div className="slide slide--lead fade-in">
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+              <QuanticaLogo size={80} style={{ filter: 'drop-shadow(0 0 10px rgba(52, 152, 219, 0.25))' }} />
+            </div>
             <span className="slide-tag" style={{ alignSelf: 'center' }}>CONCLUSION</span>
             <h1 className="main-title" style={{ fontSize: '2.2em', marginTop: '20px' }}>
               Quantica Risk が安全性評価のプロセスを革新する

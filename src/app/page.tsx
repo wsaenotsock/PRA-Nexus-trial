@@ -26,6 +26,8 @@ import { useYjsStore } from '@/store/yjsStore';
 
 import ValidationPanel from '@/components/editor/ValidationPanel';
 import FeedbackModal from '@/components/feedback/FeedbackModal';
+import { QuanticaLogo } from '@/components/brand/QuanticaLogo';
+
 
 type ViewMode = 'editor' | 'et_editor' | 'results' | 'split' | 'data' | 'report' | 'seismic' | 'quantification';
 type Locale = 'ja' | 'en';
@@ -548,7 +550,9 @@ export default function Home() {
           style={{ cursor: 'pointer' }}
           title={locale === 'ja' ? 'Quantica Riskの詳細を見る (新しいタブ)' : 'View Quantica Risk Details (New Tab)'}
         >
-          <div className="app-header__logo-icon">⚛</div>
+          <div className="app-header__logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', backgroundColor: 'transparent', border: 'none', marginRight: '4px' }}>
+            <QuanticaLogo size={24} />
+          </div>
           <span className="app-header__title">Quantica Risk</span>
           <span className="app-header__subtitle">
             {locale === 'ja' ? '静的PRA解析' : 'Static PRA Analysis'}
