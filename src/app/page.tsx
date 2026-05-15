@@ -550,8 +550,8 @@ export default function Home() {
           style={{ cursor: 'pointer' }}
           title={locale === 'ja' ? 'Quantica Riskの詳細を見る (新しいタブ)' : 'View Quantica Risk Details (New Tab)'}
         >
-          <div className="app-header__logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '24px', height: '24px', backgroundColor: 'transparent', border: 'none', marginRight: '4px' }}>
-            <QuanticaLogo size={24} />
+          <div className="app-header__logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', background: 'none', border: 'none', boxShadow: 'none', marginRight: '4px' }}>
+            <QuanticaLogo size={26} />
           </div>
           <span className="app-header__title">Quantica Risk</span>
           <span className="app-header__subtitle">

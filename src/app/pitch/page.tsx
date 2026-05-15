@@ -105,8 +105,8 @@ export default function PitchPage() {
       {/* ヘッダーエリア */}
       <header className="pitch-header">
         <div className="pitch-header__logo">
-          <span className="pitch-header__logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', padding: 0, border: 'none', boxShadow: 'none' }}>
-            <QuanticaLogo size={26} />
+          <span className="pitch-header__logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', padding: 0, border: 'none', boxShadow: 'none' }}>
+            <QuanticaLogo size={28} />
           </span>
           <span className="pitch-header__logo-text">Quantica Risk</span>
           <span className="pitch-header__badge">PITCH DECK</span>
