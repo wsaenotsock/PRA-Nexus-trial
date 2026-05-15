@@ -1,4 +1,4 @@
-// PRA Nexus — Project Management Type Definitions
+// Quantica Risk — Project Management Type Definitions
 
 import type { PRAModel } from './index';
 

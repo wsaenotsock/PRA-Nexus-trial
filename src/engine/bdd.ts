@@ -1,4 +1,4 @@
-// PRA Nexus — BDD Quantification Engine
+// Quantica Risk — BDD Quantification Engine
 // Binary Decision Diagram exact quantification for Fault Trees
 
 import type { Gate, BasicEvent, FaultTree, CutSet, ImportanceMeasure, QuantificationResult, Parameter, CCFGroup } from '@/lib/types';

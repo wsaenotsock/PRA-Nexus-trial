@@ -409,7 +409,7 @@ export default function FaultTreeCanvas({
     roots.forEach(rootId => processNode(rootId));
 
     return { nodes, edges };
-  }, [selectedFaultTreeId, model, dragOverNodeId, viewMode]);
+  }, [selectedFaultTreeId, model, dragOverNodeId, viewMode, isLocked]);
 
   const [nodesState, setNodes, onNodesChange] = useNodesState(nodes);
   const [edgesState, setEdges, onEdgesChange] = useEdgesState(edges);

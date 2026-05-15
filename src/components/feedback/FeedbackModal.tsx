@@ -65,7 +65,7 @@ export default function FeedbackModal({ isOpen, onClose, locale }: FeedbackModal
 
   const t = {
     title: locale === 'ja' ? '要望・フィードバックを送信' : 'Send Feedback',
-    desc: locale === 'ja' ? '本解析ツール（PRA Nexus）へのご要望や改善点をお寄せください。開発者にて確認いたします。' : 'Please send us your suggestions or improvements for PRA Nexus. The developers will review them.',
+    desc: locale === 'ja' ? '本解析ツール（Quantica Risk）へのご要望や改善点をお寄せください。開発者にて確認いたします。' : 'Please send us your suggestions or improvements for Quantica Risk. The developers will review them.',
     typeLabel: locale === 'ja' ? '種別' : 'Category',
     suggestion: locale === 'ja' ? '機能要望・改善' : 'Suggestion / Feature',
     bug: locale === 'ja' ? '不具合報告' : 'Bug Report',

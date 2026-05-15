@@ -1,8 +1,8 @@
 [package]
-name = "pra-nexus-wasm"
+name = "quantica-risk-wasm"
 version = "0.1.0"
 edition = "2021"
-description = "High-performance PRA quantification engine for PRA Nexus"
+description = "High-performance PRA quantification engine for Quantica Risk"
 
 [lib]
 crate-type = ["cdylib", "rlib"]

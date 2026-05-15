@@ -50,7 +50,7 @@ export function quantifyEventTree(
       p = be.failureType === 'demand'
         ? (be.failureRate || 0) * (be.demands ?? 1)
         : (be.failureRate || 0) * (be.missionTime || 0); // Use 0 if mission time is not set, or 24? 
-        // PRA Nexus convention: if rate is given but no time, we might need a default.
+        // Quantica Risk convention: if rate is given but no time, we might need a default.
         // But 0 is safer if the user hasn't specified. Let's use 24 for backward compat if needed,
         // but the user likely wants their actual mission time.
     }
@@ -86,7 +86,7 @@ export function quantifyEventTree(
     const ft = model.faultTrees.find(f => f.id === ftId);
     if (!ft) return FALSE_NODE;
     
-    const isPruningEnabled = model.quantificationSettings?.enablePruning !== false;
+    const isPruningEnabled = model.quantificationSettings?.enablePruning === true;
     const bddCutoff = isPruningEnabled ? (model.quantificationSettings?.bddCutOff ?? 1e-20) : 0;
     
     // IMPORTANT: Use the uniform shared globalVariableOrder to prevent crashes/corruption!
@@ -262,7 +262,7 @@ export function quantifyEventTree(
       const isSuccess = categories.length === 1 && 
         (categories[0].toLowerCase() === 'success' || categories[0] === '成功' || categories[0] === 'OK');
       
-      const isPruningEnabled = model.quantificationSettings?.enablePruning !== false;
+      const isPruningEnabled = model.quantificationSettings?.enablePruning === true;
       const bddCutoff = isPruningEnabled ? (model.quantificationSettings?.bddCutOff ?? 1e-20) : 0;
       if (es && !isSuccess) {
         if (seqFreq >= bddCutoff) {

@@ -1316,9 +1316,9 @@ function createDefaultModel(): PRAModel {
     "uncertaintyEnabled": true
   },
   "quantificationSettings": {
-    "cutOff": 1e-10,
+    "cutOff": 1e-20,
     "bddCutOff": 1e-20,
-    "enablePruning": true,
+    "enablePruning": false,
     "approximation": ["bdd_exact", "mcub", "rare_event"],
     "monteCarloSamples": 10000,
     "useLHS": true,
@@ -1403,8 +1403,11 @@ export const useModelStore = create<ModelState>((set, get) => ({
     const updatedModel = { ...model };
     if (updatedModel.quantificationSettings) {
       // Force update legacy default values to new system standards if they haven't changed
-      if (updatedModel.quantificationSettings.cutOff === 1e-20 || updatedModel.quantificationSettings.cutOff === 1e-9 || !updatedModel.quantificationSettings.cutOff) {
-        updatedModel.quantificationSettings.cutOff = 1e-10;
+      if (updatedModel.quantificationSettings.cutOff === 1e-10 || 
+          updatedModel.quantificationSettings.cutOff === 1e-9 || 
+          updatedModel.quantificationSettings.cutOff === 1 || // Catch invalid 1.0 default
+          !updatedModel.quantificationSettings.cutOff) {
+        updatedModel.quantificationSettings.cutOff = 1e-20;
       }
       // Convert legacy single-string approximation into user's desired full array default
       const currentAppx = updatedModel.quantificationSettings.approximation;
@@ -1421,17 +1424,27 @@ export const useModelStore = create<ModelState>((set, get) => ({
         updatedModel.quantificationSettings.maxCutsets = 100000;
       }
 
-      if (updatedModel.quantificationSettings.bddCutOff === undefined) {
+      if (updatedModel.quantificationSettings.bddCutOff === undefined || updatedModel.quantificationSettings.bddCutOff === 1) {
         updatedModel.quantificationSettings.bddCutOff = 1e-20;
       }
-      if (updatedModel.quantificationSettings.enablePruning === undefined) {
-        updatedModel.quantificationSettings.enablePruning = true;
+      // Force update legacy enablePruning = true once to respect the new default-off policy for loaded models as well.
+      // UPGRADED v8: Directly commit the sanitized state to individual project storage to prevent synced state rollbacks.
+      if (updatedModel.quantificationSettings.enablePruning === undefined || 
+          (typeof window !== 'undefined' && !window.localStorage.getItem('pra-nexus-pruning-v8-storage-setmodel-sync'))) {
+        updatedModel.quantificationSettings.enablePruning = false;
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('pra-nexus-pruning-v8-storage-setmodel-sync', 'done');
+          // Persist changes immediately down to the persistent layer to fix corruption
+          try {
+            localStorage.setItem(`pra_project_model_${updatedModel.id}`, JSON.stringify(updatedModel));
+          } catch (_) {}
+        }
       }
     } else {
       updatedModel.quantificationSettings = {
-        cutOff: 1e-10,
+        cutOff: 1e-20,
         bddCutOff: 1e-20,
-        enablePruning: true,
+        enablePruning: false,
         approximation: ['bdd_exact', 'mcub', 'rare_event'],
         monteCarloSamples: 10000,
         useLHS: true,
@@ -2576,9 +2589,9 @@ export const useModelStore = create<ModelState>((set, get) => ({
         if (!parsed.seismicSettings.selectedETIds) parsed.seismicSettings.selectedETIds = [];
         if (!parsed.quantificationSettings) {
           parsed.quantificationSettings = {
-            cutOff: 1e-10,
+            cutOff: 1e-20,
             bddCutOff: 1e-20,
-            enablePruning: true,
+            enablePruning: false,
             approximation: ['bdd_exact', 'mcub', 'rare_event'],
             monteCarloSamples: 10000,
             useLHS: true,
@@ -2587,14 +2600,35 @@ export const useModelStore = create<ModelState>((set, get) => ({
           };
         } else {
           // Force update legacy default values
-          if (parsed.quantificationSettings.cutOff === 1e-20 || parsed.quantificationSettings.cutOff === 1e-9 || !parsed.quantificationSettings.cutOff) {
-            parsed.quantificationSettings.cutOff = 1e-10;
-          }
-          if (parsed.quantificationSettings.bddCutOff === undefined) {
+          // Force reset legacy cutoff to 1e-20 once for existing users to respect the new default policy.
+          if (typeof window !== 'undefined' && !window.localStorage.getItem('pra-nexus-cutoff-v3-reset')) {
+            parsed.quantificationSettings.cutOff = 1e-20;
             parsed.quantificationSettings.bddCutOff = 1e-20;
+            if (typeof window !== 'undefined') {
+              window.localStorage.setItem('pra-nexus-cutoff-v3-reset', 'done');
+            }
+          } else {
+            // Fallback legacy checks just in case
+            if (parsed.quantificationSettings.cutOff === 1e-10 || parsed.quantificationSettings.cutOff === 1e-9 || parsed.quantificationSettings.cutOff === 1 || !parsed.quantificationSettings.cutOff) {
+              parsed.quantificationSettings.cutOff = 1e-20;
+            }
+            if (parsed.quantificationSettings.bddCutOff === undefined || parsed.quantificationSettings.bddCutOff === 1) {
+              parsed.quantificationSettings.bddCutOff = 1e-20;
+            }
           }
-          if (parsed.quantificationSettings.enablePruning === undefined) {
-            parsed.quantificationSettings.enablePruning = true;
+          // Force update legacy enablePruning = true once to respect the new default-off policy for existing users.
+          // UPGRADED v8: Directly commit changes back to storage immediately so other components read clean state.
+          if (parsed.quantificationSettings.enablePruning === undefined || 
+              (typeof window !== 'undefined' && !window.localStorage.getItem('pra-nexus-pruning-v8-storage-load-sync'))) {
+            parsed.quantificationSettings.enablePruning = false;
+            if (typeof window !== 'undefined') {
+              window.localStorage.setItem('pra-nexus-pruning-v8-storage-load-sync', 'done');
+              // Force write-through cache right now to eradicate memory-only race conditions!
+              await setIDBItem('pra-nexus-model', parsed);
+              try {
+                localStorage.setItem('pra-nexus-model', JSON.stringify(parsed));
+              } catch (_) {}
+            }
           }
           // Convert legacy single-string approximation into array default
           const currentAppx = parsed.quantificationSettings.approximation;

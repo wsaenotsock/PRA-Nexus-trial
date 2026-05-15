@@ -1,4 +1,4 @@
-// PRA Nexus — Model Diff Engine
+// Quantica Risk — Model Diff Engine
 // PRAModel に特化した差分計算
 
 import type { PRAModel } from '@/lib/types';

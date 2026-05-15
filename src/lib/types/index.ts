@@ -1,4 +1,4 @@
-// PRA Nexus — Core Type Definitions
+// Quantica Risk — Core Type Definitions
 // Open-PSA MEF対応データモデル
 
 // ===== Distribution Types =====

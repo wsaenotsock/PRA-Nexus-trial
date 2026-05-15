@@ -1,4 +1,4 @@
-# Dockerfile for Yjs WebSocket Server (pra-nexus)
+# Dockerfile for Yjs WebSocket Server (quantica-risk)
 FROM node:20-alpine
 
 WORKDIR /app

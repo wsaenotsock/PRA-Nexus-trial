@@ -91,7 +91,7 @@ export default function Home() {
   // Connect to Yjs room when project changes
   useEffect(() => {
     if (activeProjectId) {
-      connect(`pra-nexus-project-${activeProjectId}`, userName);
+      connect(`quantica-risk-project-${activeProjectId}`, userName);
     } else {
       disconnect();
     }
@@ -167,7 +167,7 @@ export default function Home() {
 
   // Load saved theme on mount
   useEffect(() => {
-    const savedTheme = localStorage.getItem('pra-nexus-theme') as 'dark' | 'light';
+    const savedTheme = localStorage.getItem('quantica-risk-theme') as 'dark' | 'light';
     if (savedTheme) {
       setTheme(savedTheme);
       document.documentElement.setAttribute('data-theme', savedTheme);
@@ -179,7 +179,7 @@ export default function Home() {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('pra-nexus-theme', newTheme);
+    localStorage.setItem('quantica-risk-theme', newTheme);
   }, [theme]);
 
   // Load saved model on mount
@@ -546,10 +546,10 @@ export default function Home() {
           className="app-header__logo" 
           onClick={() => window.open('/pitch', '_blank')}
           style={{ cursor: 'pointer' }}
-          title={locale === 'ja' ? 'PRA Nexusの詳細を見る (新しいタブ)' : 'View PRA Nexus Details (New Tab)'}
+          title={locale === 'ja' ? 'Quantica Riskの詳細を見る (新しいタブ)' : 'View Quantica Risk Details (New Tab)'}
         >
           <div className="app-header__logo-icon">⚛</div>
-          <span className="app-header__title">PRA Nexus</span>
+          <span className="app-header__title">Quantica Risk</span>
           <span className="app-header__subtitle">
             {locale === 'ja' ? '静的PRA解析' : 'Static PRA Analysis'}
           </span>

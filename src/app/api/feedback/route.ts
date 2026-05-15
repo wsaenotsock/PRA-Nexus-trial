@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     const emailContent = `
       <div style="font-family: sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; max-width: 600px;">
-        <h2 style="color: #2563eb; margin-top: 0;">PRA Nexus 新しい要望が届きました</h2>
+        <h2 style="color: #2563eb; margin-top: 0;">Quantica Risk 新しい要望が届きました</h2>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
           <tr style="background: #f8fafc;">
             <td style="padding: 8px; font-weight: bold; width: 120px;">送信日時</td>
@@ -61,9 +61,9 @@ ${content}
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'PRA-Nexus <onboarding@resend.dev>', // Or your verified domain
+          from: 'Quantica-Risk <onboarding@resend.dev>', // Or your verified domain
           to: toEmail,
-          subject: `【PRA Nexus 要望】${feedbackType}`,
+          subject: `【Quantica Risk 要望】${feedbackType}`,
           html: emailContent,
         }),
       });

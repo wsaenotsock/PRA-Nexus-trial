@@ -104,7 +104,7 @@ export default function PitchPage() {
       <header className="pitch-header">
         <div className="pitch-header__logo">
           <span className="pitch-header__logo-icon">N</span>
-          <span className="pitch-header__logo-text">PRA Nexus</span>
+          <span className="pitch-header__logo-text">Quantica Risk</span>
           <span className="pitch-header__badge">PITCH DECK</span>
         </div>
         <div className="pitch-header__status">
@@ -119,7 +119,7 @@ export default function PitchPage() {
           <div className="slide slide--lead fade-in">
             <div className="scratch-badge">100% インハウス・フルスクラッチ開発</div>
             <h1 className="main-title">
-              PRA Nexus
+              Quantica Risk
             </h1>
             <h2 className="main-subtitle">
               次世代 静的・協調型 確率論的安全評価（PRA）プラットフォーム
@@ -170,7 +170,7 @@ export default function PitchPage() {
           <div className="slide fade-in">
             <span className="slide-tag">TECHNICAL ADVANTAGE</span>
             <h2 className="slide-title">技術的真価：完全インハウス・フルスクラッチ開発</h2>
-            <p className="slide-subtitle">PRA Nexusは、一切の外部ブラックボックスに依存しない、自社設計のコードベースで構築されています。</p>
+            <p className="slide-subtitle">Quantica Riskは、一切の外部ブラックボックスに依存しない、自社設計のコードベースで構築されています。</p>
 
             <div className="fullscratch-comparison">
               <div className="comp-panel legacy">
@@ -184,7 +184,7 @@ export default function PitchPage() {
               </div>
               <div className="comp-panel nexus glow-cyan">
                 <div className="nexus-highlight-tag">100% IN-HOUSE CODE</div>
-                <h4>PRA Nexus (フルスクラッチ)</h4>
+                <h4>Quantica Risk (フルスクラッチ)</h4>
                 <ul>
                   <li><strong>自社独自アルゴリズム</strong>: BDD演算・不確かさ・マージロジックを独自実装</li>
                   <li><strong>完全な透明性と説明責任</strong>: 全計算ステップを追跡・監査可能</li>
@@ -443,7 +443,7 @@ export default function PitchPage() {
         {/* スライド9: 将来展望・マスターロードマップ */}
         {currentSlide === 8 && (
           <div className="slide fade-in">
-            <span className="slide-tag">PRA NEXUS MASTER ROADMAP</span>
+            <span className="slide-tag">QUANTICA RISK MASTER ROADMAP</span>
             <h2 className="slide-title">将来の展望とロードマップ</h2>
             <p className="slide-subtitle" style={{ marginBottom: '16px' }}>静的な解析の枠組みを完全に超越する、一貫したアーキテクチャロードマップ（Phase 1 〜 Phase 7）。</p>
 
@@ -506,7 +506,7 @@ export default function PitchPage() {
           <div className="slide slide--lead fade-in">
             <span className="slide-tag" style={{ alignSelf: 'center' }}>CONCLUSION</span>
             <h1 className="main-title" style={{ fontSize: '2.2em', marginTop: '20px' }}>
-              PRA Nexus が安全性評価のプロセスを革新する
+              Quantica Risk が安全性評価のプロセスを革新する
             </h1>
             <p className="main-desc" style={{ maxWidth: '800px', margin: '20px auto', fontSize: '15px' }}>
               100% インハウス・フルスクラッチ開発の高度な技術が支える「極限の演算速度」、「完全なデータ透明性」、精度と保守の「ローカル・オンプレ併用」。
@@ -528,7 +528,7 @@ export default function PitchPage() {
             </div>
 
             <h3 style={{ color: 'var(--accent-green)', fontWeight: 600, marginTop: '24px' }}>
-              安全性評価のその先へ、PRA Nexus を是非ご体験ください。
+              安全性評価のその先へ、Quantica Risk を是非ご体験ください。
             </h3>
           </div>
         )}

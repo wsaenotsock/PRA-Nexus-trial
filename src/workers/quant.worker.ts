@@ -22,7 +22,7 @@ self.onmessage = async (e: MessageEvent) => {
         const ft = (model.faultTrees || []).find((f: any) => f.id === targetId);
         if (!ft) throw new Error(`Fault Tree not found: ${targetId}`);
         
-        const cutoffValue = model.quantificationSettings?.cutOff ?? 1e-15;
+        const cutoffValue = model.quantificationSettings?.cutOff ?? 1e-20;
         const maxCutsetsValue = model.quantificationSettings?.maxCutsets ?? 100000;
         const approxSetting = model.quantificationSettings?.approximation;
         const approxMethod = Array.isArray(approxSetting) 
@@ -40,7 +40,7 @@ self.onmessage = async (e: MessageEvent) => {
         );
         res.cutoff = cutoffValue;
         res.bddCutOff = model.quantificationSettings?.bddCutOff ?? 1e-20;
-        res.enablePruning = model.quantificationSettings?.enablePruning !== false;
+        res.enablePruning = model.quantificationSettings?.enablePruning === true;
         currentResult = res;
         self.postMessage({ id, type: 'SUCCESS', result: cleanResult(res) });
         break;
@@ -59,7 +59,7 @@ self.onmessage = async (e: MessageEvent) => {
         const res = quantifyEventTree(et, model, approxMethod as any);
         res.cutoff = model.quantificationSettings?.cutOff;
         res.bddCutOff = model.quantificationSettings?.bddCutOff ?? 1e-20;
-        res.enablePruning = model.quantificationSettings?.enablePruning !== false;
+        res.enablePruning = model.quantificationSettings?.enablePruning === true;
         currentResult = res;
         self.postMessage({ id, type: 'SUCCESS', result: cleanResult(res) });
         break;

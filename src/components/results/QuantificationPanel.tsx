@@ -13,8 +13,9 @@ interface QuantificationPanelProps {
 export default function QuantificationPanel({ locale, onNavigateToResults }: QuantificationPanelProps) {
   const model = useModelStore(s => s.model);
   const settings = model.quantificationSettings || {
-    cutOff: 1e-10,
+    cutOff: 1e-20,
     bddCutOff: 1e-20,
+    enablePruning: false,
     approximation: ['bdd_exact', 'mcub', 'rare_event'],
     monteCarloSamples: 10000,
     useLHS: true,
@@ -279,14 +280,14 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
                       <input 
                         type="checkbox" 
-                        checked={settings.enablePruning !== false} 
+                        checked={settings.enablePruning === true} 
                         onChange={(e) => handleChange('enablePruning', e.target.checked)} 
                         style={{ width: '16px', height: '16px' }}
                       />
                       <span style={{ fontWeight: 500 }}>{locale === 'ja' ? 'Pruning（枝刈り）を使用' : 'Use Pruning'}</span>
                     </label>
 
-                    {settings.enablePruning !== false && (
+                    {settings.enablePruning === true && (
                       <div style={{ paddingLeft: '24px' }}>
                         <label className="form-label" style={{ marginBottom: '4px', fontSize: '12px', color: 'var(--text-secondary)' }}>{t.bddCutOff}</label>
                         <input 
@@ -310,7 +311,7 @@ export default function QuantificationPanel({ locale, onNavigateToResults }: Qua
                       </div>
                     )}
                     
-                    {settings.enablePruning !== false && (
+                    {settings.enablePruning === true && (
                       <div style={{ paddingLeft: '24px' }}>
                         <div style={{ fontSize: '11px', color: 'var(--text-secondary)', opacity: 0.9, lineHeight: 1.4 }}>
                       {locale === 'ja' 
