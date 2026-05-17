@@ -130,7 +130,7 @@ export default function FragilityTable({ locale = 'ja' }: FragilityTableProps) {
                       fontWeight: 600,
                       opacity: selectedId === f.id ? 0.9 : 1
                     }}>
-                      HCLPF={(f.am * Math.exp(-1.645 * ((f.betaR || 0) + (f.betaU || 0)))).toFixed(2)}
+                      HCLPF={((f.am ?? 0) * Math.exp(-1.645 * ((f.betaR || 0) + (f.betaU || 0)))).toFixed(2)}
                     </span>
                     <span style={{ opacity: 0.6 }}>Am={f.am}</span>
                   </>
@@ -229,7 +229,7 @@ export default function FragilityTable({ locale = 'ja' }: FragilityTableProps) {
                       <div style={{ borderTop: '1px solid var(--border-default)', paddingTop: '10px' }}>
                         <div style={{ fontWeight: 600, marginBottom: '4px', fontSize: '10px', color: 'var(--text-primary)' }}>HCLPF 容量 (g):</div>
                         <div style={{ fontSize: '18px', color: '#3b82f6', fontWeight: 'bold' }}>
-                          {(selected.am * Math.exp(-1.645 * ((selected.betaR || 0) + (selected.betaU || 0)))).toFixed(3)}
+                          {((selected.am ?? 0) * Math.exp(-1.645 * ((selected.betaR || 0) + (selected.betaU || 0)))).toFixed(3)}
                         </div>
                         <small style={{ fontSize: '9px', color: 'var(--text-tertiary)', marginTop: '2px', display: 'block' }}>
                           {locale === 'ja' ? '95%信頼度での5%破損確率値' : 'High Confidence Low Probability of Failure'}
@@ -328,7 +328,7 @@ export default function FragilityTable({ locale = 'ja' }: FragilityTableProps) {
                         <>
                           <ReferenceLine x={selected.am} stroke="var(--accent-amber)" strokeDasharray="3 3" label={{ position: 'top', value: 'Am', fill: 'var(--accent-amber)', fontSize: 10 }} />
                           <ReferenceLine 
-                            x={selected.am * Math.exp(-1.645 * ((selected.betaR || 0) + (selected.betaU || 0)))} 
+                            x={(selected.am ?? 0) * Math.exp(-1.645 * ((selected.betaR || 0) + (selected.betaU || 0)))} 
                             stroke="#3b82f6" 
                             strokeDasharray="3 3" 
                             label={{ position: 'top', value: 'HCLPF', fill: '#3b82f6', fontSize: 10 }} 

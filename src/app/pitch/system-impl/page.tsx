@@ -1,15 +1,30 @@
 'use client';
-
+ 
 import React, { useState, useEffect } from 'react';
-
+import { QuanticaLogo } from '@/components/brand/QuanticaLogo';
+ 
 export default function SystemImplPitch() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const totalSlides = 8;
   const [isMounted, setIsMounted] = useState(false);
-
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
+ 
   useEffect(() => {
     setIsMounted(true);
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('quantica-risk-theme') as 'dark' | 'light';
+      const initialTheme = savedTheme || 'light';
+      setTheme(initialTheme);
+      document.documentElement.setAttribute('data-theme', initialTheme);
+    }
   }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('quantica-risk-theme', newTheme);
+  };
 
   // スライドナビゲーション用のキーイベント
   useEffect(() => {
@@ -60,17 +75,37 @@ export default function SystemImplPitch() {
   };
 
   return (
-    <div className="pitch-container">
+    <div className={`pitch-container ${theme === 'light' ? 'pitch-container--light' : ''}`}>
       <div className="pitch-bg-glow" />
 
       {/* ヘッダー */}
       <header className="pitch-header">
-        <div className="pitch-header__logo">
-          <span className="pitch-header__logo-icon" style={{ background: 'linear-gradient(135deg, #A855F7, #06B6D4)' }}>S</span>
-          <span className="pitch-header__logo-text">PRA Nexus - System Architecture</span>
-          <span className="pitch-header__badge" style={{ background: 'rgba(168, 85, 247, 0.15)', color: '#A855F7' }}>SYSTEM SLIDES</span>
+        <div className="pitch-header__logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span className="pitch-header__logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', padding: 0, border: 'none', boxShadow: 'none' }}>
+            <QuanticaLogo size={28} theme={theme} />
+          </span>
+          <span className="pitch-header__logo-text">Quantica Risk - System Architecture</span>
+          <span className="pitch-header__badge" style={{ background: theme === 'dark' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.08)', color: '#A855F7' }}>SYSTEM SLIDES</span>
         </div>
-        <div className="pitch-header__status">
+        <div className="pitch-header__status" style={{ display: 'flex', alignItems: 'center' }}>
+          <button 
+            onClick={toggleTheme} 
+            className="theme-toggle-btn"
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer', 
+              fontSize: '18px', 
+              marginRight: '20px',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              transition: 'background 0.2s',
+              outline: 'none'
+            }}
+            title={theme === 'dark' ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
           Slide {currentSlide + 1} / {totalSlides}
         </div>
       </header>
@@ -592,6 +627,187 @@ applyCache.clear();`}</code></pre>
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* === LIGHT MODE OVERRIDES === */
+        .pitch-container--light {
+          background-color: #F8FAFC !important;
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .pitch-bg-glow {
+          background: radial-gradient(circle, rgba(168, 85, 247, 0.08) 0%, transparent 70%) !important;
+        }
+
+        .pitch-container--light .pitch-header {
+          background: rgba(248, 250, 252, 0.85) !important;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .pitch-header__logo-text {
+          background: linear-gradient(90deg, #0F172A, #A855F7) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+        }
+
+        .pitch-container--light .pitch-header__badge {
+          background: rgba(168, 85, 247, 0.1) !important;
+          color: #A855F7 !important;
+        }
+
+        .pitch-container--light .pitch-header__status {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .slide-title {
+          background: linear-gradient(90deg, #0F172A, #475569) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+        }
+
+        .pitch-container--light .slide-subtitle {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .main-subtitle {
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .main-desc {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .feat-chip {
+          background: rgba(255, 255, 255, 0.8) !important;
+          border: 1px solid rgba(148, 163, 184, 0.25) !important;
+          color: #1E293B !important;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+        }
+
+        .pitch-container--light .navigation-hint {
+          color: #94A3B8 !important;
+        }
+
+        .pitch-container--light .navigation-hint span {
+          background: #E2E8F0 !important;
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .arch-card {
+          background: rgba(255, 255, 255, 0.85) !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .arch-card h4 {
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .arch-card p {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .arch-connector {
+          color: #A855F7 !important;
+        }
+
+        .pitch-container--light .styled-list li {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .interactive-box {
+          background: rgba(255, 255, 255, 0.95) !important;
+        }
+
+        .pitch-container--light .interactive-header {
+          background: rgba(241, 245, 249, 0.9) !important;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .code-block-display {
+          background: #F8FAFC !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+          color: #A855F7 !important;
+        }
+
+        .pitch-container--light .validation-success-badge {
+          background: rgba(168, 85, 247, 0.08) !important;
+        }
+
+        .pitch-container--light .console-output {
+          background: #F8FAFC !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+          color: #A855F7 !important;
+        }
+
+        .pitch-container--light .conclusion-card {
+          background: rgba(255, 255, 255, 0.8) !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .conclusion-card h4 {
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .conclusion-card p {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .pitch-controls {
+          background: rgba(248, 250, 252, 0.85) !important;
+          border-top: 1px solid rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .dot {
+          background: rgba(148, 163, 184, 0.4) !important;
+        }
+
+        .pitch-container--light .dot:hover {
+          background: rgba(148, 163, 184, 0.7) !important;
+        }
+
+        .pitch-container--light .dot--active {
+          background: #A855F7 !important;
+          box-shadow: 0 0 10px rgba(168, 85, 247, 0.5) !important;
+        }
+
+        .pitch-container--light .btn--secondary {
+          background: rgba(148, 163, 184, 0.15) !important;
+          color: #1E293B !important;
+        }
+
+        /* === EXTRA HIGH CONTRAST LIGHT MODE OVERRIDES === */
+        .pitch-container--light .demo-info h3 {
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .styled-list li {
+          color: #334155 !important;
+        }
+
+        .pitch-container--light .styled-list li strong {
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .slide-subtitle {
+          color: #334155 !important;
+        }
+
+        .pitch-container--light .arch-connector {
+          color: #7E22CE !important;
+          font-weight: 700 !important;
+        }
+
+        .pitch-container--light .console-output,
+        .pitch-container--light .console-output p,
+        .pitch-container--light .console-output div {
+          color: #6B21A8 !important;
+        }
+
+        .pitch-container--light .code-block-display,
+        .pitch-container--light .code-block-display code,
+        .pitch-container--light .code-block-display pre {
+          color: #4A044E !important;
         }
       `}</style>
     </div>

@@ -52,7 +52,7 @@ export default function Home() {
     showUncertainty: true,
     showMCS: true
   });
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [modal, setModal] = useState<{
     show: boolean,
@@ -192,10 +192,9 @@ export default function Home() {
   // Load saved theme on mount
   useEffect(() => {
     const savedTheme = localStorage.getItem('quantica-risk-theme') as 'dark' | 'light';
-    if (savedTheme) {
-      setTheme(savedTheme);
-      document.documentElement.setAttribute('data-theme', savedTheme);
-    }
+    const initialTheme = savedTheme || 'light';
+    setTheme(initialTheme);
+    document.documentElement.setAttribute('data-theme', initialTheme);
   }, []);
 
   // Update theme

@@ -378,7 +378,7 @@ export default function FaultTreeCanvas({
           // In tree mode, we fully auto-align basic events centered right beneath their parent gate.
           // This instantly fixes overlapping on view mode toggle, and makes children naturally
           // follow their parent gates like a real fault tree tool.
-          let resolvedPosition = be.position || { x: 0, y: 0 };
+          let resolvedPosition = (be as any).position || { x: 0, y: 0 };
           let isDraggable = !isLocked;
 
           if (viewMode === 'tree' && parentId) {

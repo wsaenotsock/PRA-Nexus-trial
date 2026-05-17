@@ -33,11 +33,25 @@ export default function PitchPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const totalSlides = 10;
   const [isMounted, setIsMounted] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
 
   // SSR時のハイドレーション及び描画崩れ防止
   useEffect(() => {
     setIsMounted(true);
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('quantica-risk-theme') as 'dark' | 'light';
+      const initialTheme = savedTheme || 'light';
+      setTheme(initialTheme);
+      document.documentElement.setAttribute('data-theme', initialTheme);
+    }
   }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('quantica-risk-theme', newTheme);
+  };
 
   // --- 特徴2: 共同編集デモステート ---
   const [collabLogs, setCollabLogs] = useState<Array<{ id: number; user: string; action: string; color: string }>>([
@@ -98,7 +112,7 @@ export default function PitchPage() {
   };
 
   return (
-    <div className="pitch-container">
+    <div className={`pitch-container ${theme === 'light' ? 'pitch-container--light' : ''}`}>
       {/* 画面全体の動的背景グラデーション */}
       <div className="pitch-bg-glow" />
 
@@ -106,12 +120,30 @@ export default function PitchPage() {
       <header className="pitch-header">
         <div className="pitch-header__logo">
           <span className="pitch-header__logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', padding: 0, border: 'none', boxShadow: 'none' }}>
-            <QuanticaLogo size={28} />
+            <QuanticaLogo size={28} theme={theme} />
           </span>
           <span className="pitch-header__logo-text">Quantica Risk</span>
           <span className="pitch-header__badge">PITCH DECK</span>
         </div>
-        <div className="pitch-header__status">
+        <div className="pitch-header__status" style={{ display: 'flex', alignItems: 'center' }}>
+          <button 
+            onClick={toggleTheme} 
+            className="theme-toggle-btn"
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer', 
+              fontSize: '18px', 
+              marginRight: '20px',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              transition: 'background 0.2s',
+              outline: 'none'
+            }}
+            title={theme === 'dark' ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
           Slide {currentSlide + 1} / {totalSlides}
         </div>
       </header>
@@ -122,7 +154,7 @@ export default function PitchPage() {
         {currentSlide === 0 && (
           <div className="slide slide--lead fade-in">
             <div className="cover-logo" style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-              <QuanticaLogo size={96} style={{ filter: 'drop-shadow(0 0 12px rgba(52, 152, 219, 0.3))' }} />
+              <QuanticaLogo size={96} theme={theme} style={{ filter: theme === 'dark' ? 'drop-shadow(0 0 12px rgba(52, 152, 219, 0.3))' : 'drop-shadow(0 0 12px rgba(52, 152, 219, 0.15))' }} />
             </div>
             <div className="scratch-badge">100% インハウス・フルスクラッチ開発</div>
             <h1 className="main-title">
@@ -461,7 +493,7 @@ export default function PitchPage() {
                 <div className="timeline-item" style={{ padding: '8px 14px' }}>
                   <div className="time-badge" style={{ color: 'var(--accent-green)', fontSize: '9px' }}>Phase 1</div>
                   <h4 style={{ fontSize: '12px', margin: '2px 0', color: '#F1F5F9' }}>基礎PF ＆ FT/ET 双方向エディタ</h4>
-                  <p style={{ fontSize: '10px', color: '#94A3B8', margin: 0, lineShift: 0 }}>カスタムFTNode、緩和設備分岐ETBranch、プレミアムUI設計システム構築。</p>
+                  <p style={{ fontSize: '10px', color: '#94A3B8', margin: 0 }}>カスタムFTNode、緩和設備分岐ETBranch、プレミアムUI設計システム構築。</p>
                 </div>
 
                 <div className="timeline-item" style={{ padding: '8px 14px' }}>
@@ -1327,7 +1359,305 @@ export default function PitchPage() {
             transform: translateY(0);
           }
         }
+
+        /* === LIGHT MODE OVERRIDES === */
+        .pitch-container--light {
+          background-color: #F8FAFC !important;
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .pitch-bg-glow {
+          background: radial-gradient(circle, rgba(6, 182, 212, 0.08) 0%, transparent 70%) !important;
+        }
+
+        .pitch-container--light .pitch-header {
+          background: rgba(248, 250, 252, 0.85) !important;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .pitch-header__logo-text {
+          background: linear-gradient(90deg, #0F172A, #0EA5E9) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+        }
+
+        .pitch-container--light .pitch-header__badge {
+          background: rgba(14, 165, 233, 0.1) !important;
+          color: #0284C7 !important;
+        }
+
+        .pitch-container--light .pitch-header__status {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .slide-title {
+          background: linear-gradient(90deg, #0F172A, #475569) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+        }
+
+        .pitch-container--light .slide-subtitle {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .main-subtitle {
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .main-desc {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .feat-chip {
+          background: rgba(255, 255, 255, 0.8) !important;
+          border: 1px solid rgba(148, 163, 184, 0.25) !important;
+          color: #1E293B !important;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+        }
+
+        .pitch-container--light .navigation-hint {
+          color: #94A3B8 !important;
+        }
+
+        .pitch-container--light .navigation-hint span {
+          background: #E2E8F0 !important;
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .challenge-card {
+          background: rgba(255, 255, 255, 0.85) !important;
+          border: 1px solid rgba(239, 68, 68, 0.15) !important;
+        }
+
+        .pitch-container--light .challenge-card:hover {
+          border-color: rgba(239, 68, 68, 0.4) !important;
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.05) !important;
+        }
+
+        .pitch-container--light .challenge-card h3 {
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .challenge-card p {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .comp-panel.legacy {
+          background: rgba(255, 255, 255, 0.8) !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .comp-panel.legacy h4 {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .comp-panel.legacy li {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .comp-panel.nexus {
+          background: rgba(255, 255, 255, 0.95) !important;
+        }
+
+        .pitch-container--light .comp-panel.nexus h4 {
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .comp-panel.nexus li {
+          color: #334155 !important;
+        }
+
+        .pitch-container--light .interactive-box {
+          background: rgba(255, 255, 255, 0.95) !important;
+        }
+
+        .pitch-container--light .interactive-header {
+          background: rgba(241, 245, 249, 0.9) !important;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .collab-log-entry {
+          background: #F8FAFC !important;
+          border: 1px solid rgba(148, 163, 184, 0.15) !important;
+          color: #334155 !important;
+        }
+
+        .pitch-container--light .collab-step-indicator {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .diff-item--unchanged {
+          background: rgba(241, 245, 249, 0.5) !important;
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .diff-item--changed {
+          background: rgba(245, 158, 11, 0.05) !important;
+          border-color: rgba(245, 158, 11, 0.2) !important;
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .diff-item--changed .old-val {
+          color: #EF4444 !important;
+        }
+
+        .pitch-container--light .diff-item--changed .new-val {
+          color: #10B981 !important;
+        }
+
+        .pitch-container--light .diff-item--added {
+          background: rgba(16, 185, 129, 0.05) !important;
+          border-color: rgba(16, 185, 129, 0.2) !important;
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .diff-item--merged {
+          background: rgba(16, 185, 129, 0.08) !important;
+          border-color: rgba(16, 185, 129, 0.3) !important;
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .deploy-card {
+          background: rgba(255, 255, 255, 0.85) !important;
+          border: 1px solid rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .deploy-card:hover {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+        }
+
+        .pitch-container--light .deploy-card.border-cyan {
+          border-color: rgba(6, 182, 212, 0.35) !important;
+        }
+
+        .pitch-container--light .deploy-card.border-cyan:hover {
+          border-color: rgba(6, 182, 212, 0.6) !important;
+          box-shadow: 0 4px 15px rgba(6, 182, 212, 0.08) !important;
+        }
+
+        .pitch-container--light .deploy-card h3 {
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .deploy-card li {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .timeline-item {
+          background: rgba(255, 255, 255, 0.8) !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .timeline-item.active {
+          background: rgba(255, 255, 255, 0.95) !important;
+          border-color: rgba(16, 185, 129, 0.4) !important;
+          box-shadow: 0 4px 15px rgba(16, 185, 129, 0.05) !important;
+        }
+
+        .pitch-container--light .timeline-item h4 {
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .timeline-item p {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .conclusion-card {
+          background: rgba(255, 255, 255, 0.8) !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .conclusion-card h4 {
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .conclusion-card p {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .pitch-controls {
+          background: rgba(248, 250, 252, 0.85) !important;
+          border-top: 1px solid rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .dot {
+          background: rgba(148, 163, 184, 0.4) !important;
+        }
+
+        .pitch-container--light .dot:hover {
+          background: rgba(148, 163, 184, 0.7) !important;
+        }
+
+        .pitch-container--light .dot--active {
+          background: var(--accent-cyan) !important;
+          box-shadow: 0 0 10px rgba(6, 182, 212, 0.5) !important;
+        }
+
+        .pitch-container--light .chart-loading-placeholder {
+          background: rgba(255, 255, 255, 0.5) !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .demo-info h3 {
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .styled-list li {
+          color: #334155 !important;
+        }
+
+        .pitch-container--light .styled-list li strong {
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .sim-collab-viewport {
+          background: #F8FAFC !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .collab-user {
+          color: #0284C7 !important;
+        }
+
+        .pitch-container--light .collab-action {
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .diff-view-demo {
+          background: #F8FAFC !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .diff-item--unchanged {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .console-output {
+          background: #F8FAFC !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .slider-value {
+          color: #0D9488 !important;
+        }
+
+        .pitch-container--light .slider-input {
+          background: #E2E8F0 !important;
+        }
+
+        .pitch-container--light .wasm-results p {
+          color: #334155 !important;
+        }
+
+        .pitch-container--light .cover-features .feat-chip {
+          background: #FFFFFF !important;
+          color: #1E293B !important;
+          border: 1px solid rgba(148, 163, 184, 0.3) !important;
+        }
       `}</style>
     </div>
   );
 }
+

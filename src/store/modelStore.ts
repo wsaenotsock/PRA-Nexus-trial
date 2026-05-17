@@ -15,7 +15,7 @@ function createDefaultModel(): PRAModel {
   "version": 1,
   "locale": "ja",
   "createdAt": "2026-04-26T00:38:37.584Z",
-  "updatedAt": "2026-05-10T15:07:29.367Z",
+  "updatedAt": "2026-05-17T12:41:38.536Z",
   "faultTrees": [
     {
       "id": "cf187f39-aba2-4cc1-9674-1401731bd665",
@@ -899,12 +899,11 @@ function createDefaultModel(): PRAModel {
     {
       "id": "9f9884e9-3c95-4308-9665-73234788ba49",
       "name": "新規CCFグループ",
-      "model": "beta_factor",
-      "members": [
-        "aabe8e8e-c240-474a-ab84-cf195ba9fc75"
-      ],
+      "model": "mgl",
+      "members": [],
       "parameters": {
-        "beta": 0.1
+        "beta": 0.1,
+        "gamma": 0.5
       }
     },
     {
@@ -1319,12 +1318,56 @@ function createDefaultModel(): PRAModel {
     "cutOff": 1e-20,
     "bddCutOff": 1e-20,
     "enablePruning": false,
-    "approximation": ["bdd_exact", "mcub", "rare_event"],
+    "approximation": [
+      "bdd_exact",
+      "mcub",
+      "rare_event"
+    ],
     "monteCarloSamples": 10000,
     "useLHS": true,
     "runUncertainty": false,
     "maxCutsets": 100000
-  }
+  },
+  "flagGroups": [
+    {
+      "id": "1b66d3a9-0bb7-4f3d-8758-d80e7cd0e659",
+      "name": "新規フラググループ",
+      "items": [
+        {
+          "eventId": "7f7ac691-a37f-4e1f-b20f-acaf0e1aa643",
+          "state": false
+        }
+      ]
+    }
+  ],
+  "recoveryGroups": [
+    {
+      "id": "85c52f17-4f1f-4885-b43a-63c48d8e6d88",
+      "name": "新規リカバリーグループ",
+      "description": "新規追加されたグループです。",
+      "rules": [
+        {
+          "id": "9d466ab8-63cf-47f3-a085-83a58b768441",
+          "name": "新規リカバリールール",
+          "condition": [
+            "7f7ac691-a37f-4e1f-b20f-acaf0e1aa643",
+            "8e6b8bfd-2904-4269-82fe-04de24131bc9"
+          ],
+          "action": "add",
+          "priority": 10
+        }
+      ]
+    },
+    {
+      "id": "1e786fc5-1b98-412e-b7d8-465f8473546b",
+      "name": "新規リカバリーグループ",
+      "description": "新規追加されたグループです。",
+      "rules": []
+    }
+  ],
+  "activeRecoveryGroupId": "85c52f17-4f1f-4885-b43a-63c48d8e6d88",
+  "activeFlagGroupId": "1b66d3a9-0bb7-4f3d-8758-d80e7cd0e659",
+  "recoveryRules": []
 };
 }
 

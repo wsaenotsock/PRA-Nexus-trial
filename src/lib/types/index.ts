@@ -297,6 +297,7 @@ export interface SequenceResult {
   cutSets?: CutSet[];
   rawCutSetCount?: number;
   importanceMeasures?: ImportanceMeasure[];
+  appliedRecoveryCount?: number;
 }
 
 export interface SeismicPointResult {

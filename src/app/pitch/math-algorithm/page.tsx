@@ -1,5 +1,5 @@
 'use client';
-
+ 
 import React, { useState, useEffect } from 'react';
 import {
   LineChart,
@@ -13,15 +13,30 @@ import {
   Bar,
   ReferenceLine
 } from 'recharts';
-
+import { QuanticaLogo } from '@/components/brand/QuanticaLogo';
+ 
 export default function MathAlgorithmPitch() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const totalSlides = 8;
   const [isMounted, setIsMounted] = useState(false);
-
+  const [theme, setTheme] = useState<'dark' | 'light'>('light');
+ 
   useEffect(() => {
     setIsMounted(true);
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('quantica-risk-theme') as 'dark' | 'light';
+      const initialTheme = savedTheme || 'light';
+      setTheme(initialTheme);
+      document.documentElement.setAttribute('data-theme', initialTheme);
+    }
   }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('quantica-risk-theme', newTheme);
+  };
 
   // スライドナビゲーション用のキーイベント
   useEffect(() => {
@@ -59,17 +74,37 @@ export default function MathAlgorithmPitch() {
   ];
 
   return (
-    <div className="pitch-container">
+    <div className={`pitch-container ${theme === 'light' ? 'pitch-container--light' : ''}`}>
       <div className="pitch-bg-glow" />
 
       {/* ヘッダー */}
       <header className="pitch-header">
-        <div className="pitch-header__logo">
-          <span className="pitch-header__logo-icon">M</span>
-          <span className="pitch-header__logo-text">PRA Nexus - Math Validation</span>
+        <div className="pitch-header__logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span className="pitch-header__logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', padding: 0, border: 'none', boxShadow: 'none' }}>
+            <QuanticaLogo size={28} theme={theme} />
+          </span>
+          <span className="pitch-header__logo-text">Quantica Risk - Math Validation</span>
           <span className="pitch-header__badge">TECHNICAL SLIDES</span>
         </div>
-        <div className="pitch-header__status">
+        <div className="pitch-header__status" style={{ display: 'flex', alignItems: 'center' }}>
+          <button 
+            onClick={toggleTheme} 
+            className="theme-toggle-btn"
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer', 
+              fontSize: '18px', 
+              marginRight: '20px',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              transition: 'background 0.2s',
+              outline: 'none'
+            }}
+            title={theme === 'dark' ? 'ライトモードに切り替え' : 'ダークモードに切り替え'}
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
           Slide {currentSlide + 1} / {totalSlides}
         </div>
       </header>
@@ -258,9 +293,9 @@ if (high === low) return high; // 冗長ノード排除`}</code></pre>
               <div className="demo-info">
                 <h3>Reed-McCann 離散積分数理</h3>
                 <ul className="styled-list">
-                  <li><strong>区間超過頻度（ΔH）の導出</strong>: 加速度区間 $[a_i, a_{i+1}]$ におけるハザード頻度の差分 ΔH を計算。</li>
-                  <li><strong>対数正規フラジリティ (CDF)</strong>: メディアン耐力 $A_m$ と不確かさ対数標準偏差 $\beta_R$、$\beta_U$ から、区間代表PGAに対する故障確率 $P_f(a)$ を算出。</li>
-                  <li><strong>全リスク合成積分</strong>: $\text{CDF} \approx \sum P_f(a_{mid}) \times \Delta H$ の正確性を検証。</li>
+                  <li><strong>区間超過頻度（ΔH）の導出</strong>: {"加速度区間 $[a_i, a_{i+1}]$ におけるハザード頻度の差分 ΔH を計算。"}</li>
+                  <li><strong>対数正規フラジリティ (CDF)</strong>: {"メディアン耐力 $A_m$ と不確かさ対数標準偏差 $\beta_R$、$\beta_U$ から、区間代表PGAに対する故障確率 $P_f(a)$ を算出。"}</li>
+                  <li><strong>全リスク合成積分</strong>: {"全リスク合成積分: $\\text{CDF} \\approx \\sum P_f(a_{mid}) \\times \\Delta H$ の正確性を検証。"}</li>
                 </ul>
               </div>
 
@@ -593,6 +628,201 @@ Fisher-Yatesシャッフルによる均一セグメント間の相関除去
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* === LIGHT MODE OVERRIDES === */
+        .pitch-container--light {
+          background-color: #F8FAFC !important;
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .pitch-bg-glow {
+          background: radial-gradient(circle, rgba(6, 182, 212, 0.08) 0%, transparent 70%) !important;
+        }
+
+        .pitch-container--light .pitch-header {
+          background: rgba(248, 250, 252, 0.85) !important;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .pitch-header__logo-text {
+          background: linear-gradient(90deg, #0F172A, #0EA5E9) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+        }
+
+        .pitch-container--light .pitch-header__badge {
+          background: rgba(14, 165, 233, 0.1) !important;
+          color: #0284C7 !important;
+        }
+
+        .pitch-container--light .pitch-header__status {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .slide-title {
+          background: linear-gradient(90deg, #0F172A, #475569) !important;
+          -webkit-background-clip: text !important;
+          -webkit-text-fill-color: transparent !important;
+        }
+
+        .pitch-container--light .slide-subtitle {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .main-subtitle {
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .main-desc {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .feat-chip {
+          background: rgba(255, 255, 255, 0.8) !important;
+          border: 1px solid rgba(148, 163, 184, 0.25) !important;
+          color: #1E293B !important;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.02) !important;
+        }
+
+        .pitch-container--light .navigation-hint {
+          color: #94A3B8 !important;
+        }
+
+        .pitch-container--light .navigation-hint span {
+          background: #E2E8F0 !important;
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .styled-list li {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .interactive-box {
+          background: rgba(255, 255, 255, 0.95) !important;
+        }
+
+        .pitch-container--light .interactive-header {
+          background: rgba(241, 245, 249, 0.9) !important;
+          border-bottom: 1px solid rgba(148, 163, 184, 0.2) !important;
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .code-block-display {
+          background: #F8FAFC !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+          color: #0284C7 !important;
+        }
+
+        .pitch-container--light .validation-success-badge {
+          background: rgba(16, 185, 129, 0.08) !important;
+        }
+
+        .pitch-container--light .console-output {
+          background: #F8FAFC !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .slider-item label {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .conclusion-card {
+          background: rgba(255, 255, 255, 0.8) !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .conclusion-card h4 {
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .conclusion-card p {
+          color: #475569 !important;
+        }
+
+        .pitch-container--light .pitch-controls {
+          background: rgba(248, 250, 252, 0.85) !important;
+          border-top: 1px solid rgba(148, 163, 184, 0.2) !important;
+        }
+
+        .pitch-container--light .dot {
+          background: rgba(148, 163, 184, 0.4) !important;
+        }
+
+        .pitch-container--light .dot:hover {
+          background: rgba(148, 163, 184, 0.7) !important;
+        }
+
+        .pitch-container--light .dot--active {
+          background: var(--accent-cyan) !important;
+          box-shadow: 0 0 10px rgba(6, 182, 212, 0.5) !important;
+        }
+
+        .pitch-container--light .btn--secondary {
+          background: rgba(148, 163, 184, 0.15) !important;
+          color: #1E293B !important;
+        }
+
+        /* === EXTRA HIGH CONTRAST LIGHT MODE OVERRIDES === */
+        .pitch-container--light .demo-info h3 {
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .styled-list li {
+          color: #334155 !important;
+        }
+
+        .pitch-container--light .styled-list li strong {
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .interactive-body p {
+          color: #334155 !important;
+        }
+
+        .pitch-container--light .slider-item {
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .slider-item label {
+          color: #1E293B !important;
+          font-weight: 600 !important;
+        }
+
+        .pitch-container--light .slider-value {
+          color: #0D9488 !important;
+        }
+
+        .pitch-container--light .slider-input {
+          background: #E2E8F0 !important;
+        }
+
+        .pitch-container--light .code-block-display {
+          background: #F8FAFC !important;
+          border-color: rgba(148, 163, 184, 0.2) !important;
+          color: #0F172A !important;
+        }
+
+        .pitch-container--light .code-block-display code,
+        .pitch-container--light .code-block-display pre {
+          color: #0F172A !important;
+        }
+
+        /* Recharts High Contrast overrides */
+        .pitch-container--light .recharts-cartesian-axis-tick-value {
+          fill: #334155 !important;
+          font-weight: 600 !important;
+        }
+
+        .pitch-container--light .recharts-legend-item-text {
+          color: #1E293B !important;
+        }
+
+        .pitch-container--light .recharts-default-tooltip {
+          background-color: #FFFFFF !important;
+          border-color: #E2E8F0 !important;
+          color: #1E293B !important;
         }
       `}</style>
     </div>

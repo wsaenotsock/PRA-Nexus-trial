@@ -42,17 +42,17 @@ input[type=number] {
   --header-height: 52px;
   --toolbar-height: 44px;
 
-  /* Default Theme (Dark) */
-  --bg-primary: #0A1628;
-  --bg-secondary: #0F1D32;
-  --bg-tertiary: #162540;
-  --bg-elevated: #1A2D4A;
-  --bg-surface: #1E3454;
-  --bg-hover: #243C5E;
+  /* Default Theme (Light) */
+  --bg-primary: #F8FAFC;
+  --bg-secondary: #F1F5F9;
+  --bg-tertiary: #E2E8F0;
+  --bg-elevated: #FFFFFF;
+  --bg-surface: #F8FAFC;
+  --bg-hover: #CBD5E1;
 
   --accent-green: #00D68F;
   --accent-green-dim: #00B377;
-  --accent-green-glow: rgba(0, 214, 143, 0.15);
+  --accent-green-glow: rgba(0, 214, 143, 0.1);
   --accent-amber: #FFB020;
   --accent-amber-dim: #E09A10;
   --accent-red: #FF4757;
@@ -64,24 +64,24 @@ input[type=number] {
   --accent-primary: #00D68F;
   --accent-primary-dim: #00B377;
 
-  --text-primary: #F1F5F9;
-  --text-secondary: #94A3B8;
-  --text-tertiary: #64748B;
-  --text-muted: #475569;
-  --text-inverse: #0A1628;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-tertiary: #94A3B8;
+  --text-muted: #64748B;
+  --text-inverse: #FFFFFF;
 
-  --border-subtle: rgba(148, 163, 184, 0.1);
-  --border-default: rgba(148, 163, 184, 0.15);
-  --border-strong: rgba(148, 163, 184, 0.25);
-  --border-accent: rgba(0, 214, 143, 0.3);
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --border-default: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.2);
+  --border-accent: rgba(0, 214, 143, 0.5);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
-  --shadow-glow-green: 0 0 20px rgba(0, 214, 143, 0.2);
-  --shadow-glow-amber: 0 0 20px rgba(255, 176, 32, 0.2);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-glow-green: 0 0 20px rgba(0, 214, 143, 0.1);
+  --shadow-glow-amber: 0 0 20px rgba(255, 176, 32, 0.1);
 
-  --bg-mask: rgba(10, 22, 40, 0.7);
+  --bg-mask: rgba(248, 250, 252, 0.7);
 }
 
 [data-theme='light'] {
