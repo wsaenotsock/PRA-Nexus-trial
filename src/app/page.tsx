@@ -735,7 +735,7 @@ export default function Home() {
             style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
           >
             <span style={{ fontSize: '14px' }}>📖</span> 
-            {locale === 'ja' ? 'Episteme 連携' : 'PRA Episteme'}
+            PRA Episteme
           </a>
 
           {/* Model Export / Import */}
