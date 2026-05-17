@@ -730,11 +730,11 @@ export default function Home() {
             href="https://pra-episteme.vercel.app/"
             target="_blank"
             rel="noopener noreferrer"
-            className="btn btn--ghost"
+            className="btn btn--secondary"
             title="PRA Knowledge Intelligence Platform"
-            style={{ fontWeight: 600, color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '4px' }}
+            style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
           >
-            <span style={{ fontSize: '16px' }}>🧠</span> 
+            <span style={{ fontSize: '14px' }}>📖</span> 
             {locale === 'ja' ? 'Episteme 連携' : 'PRA Episteme'}
           </a>
 
