@@ -723,19 +723,6 @@ export default function Home() {
             {t.projectManager}
           </button>
 
-          <div className="toolbar__separator" />
-
-          {/* PRA Episteme Link */}
-          <button
-            className="btn btn--secondary"
-            title="PRA Knowledge Intelligence Platform"
-            style={{ fontWeight: 600 }}
-            onClick={() => window.open('https://pra-episteme.vercel.app/', '_blank', 'noopener,noreferrer')}
-          >
-            <span style={{ fontSize: '14px' }}>📖</span> 
-            PRA Episteme
-          </button>
-
           {/* Model Export / Import */}
           <button
             className="btn btn--secondary"
@@ -760,6 +747,19 @@ export default function Home() {
             style={{ display: 'none' }}
             onChange={handleImportModel}
           />
+
+          <div className="toolbar__separator" />
+
+          {/* PRA Episteme Link */}
+          <button
+            className="btn btn--secondary"
+            title="PRA Knowledge Intelligence Platform"
+            style={{ fontWeight: 600 }}
+            onClick={() => window.open('https://pra-episteme.vercel.app/', '_blank', 'noopener,noreferrer')}
+          >
+            <span style={{ fontSize: '14px' }}>📖</span> 
+            PRA Episteme
+          </button>
 
           <div className="toolbar__separator" />
 
