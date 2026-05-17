@@ -17,17 +17,17 @@ export const QuanticaLogo: React.FC<QuanticaLogoProps> = ({
   style,
   theme = 'dark'
 }) => {
-  const logoSrc = theme === 'light' ? '/logo-light.png' : '/logo-dark.png';
+  const logoSrc = theme === 'light' 
+    ? '/quantica_risk_logo_light_v2_quantica_center.svg' 
+    : '/quantica_risk_logo_dark_v2_quantica_center.svg';
 
   return (
     <div 
       className={className}
       style={{
-        display: 'inline-flex',
+        display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        width: 'auto',
-        height: 'auto',
         ...style
       }}
     >
@@ -35,10 +35,8 @@ export const QuanticaLogo: React.FC<QuanticaLogoProps> = ({
         src={logoSrc} 
         alt="Quantica Risk Logo" 
         style={{
-          maxWidth: '100%',
-          maxHeight: '100%',
-          width: 'auto',
-          height: 'auto',
+          height: '100%',
+          width: '100%',
           objectFit: 'contain'
         }}
       />

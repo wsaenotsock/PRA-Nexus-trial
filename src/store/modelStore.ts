@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 import { setItem as setIDBItem, getItem as getIDBItem } from '@/lib/db';
 import * as d3 from 'd3';
-import type { PRAModel, BasicEvent, HouseEvent, Gate, FaultTree, EndState, Parameter, CCFGroup, InitiatingEvent, EventTree, Sequence, FunctionalEvent, Branch, GateType, GlobalQuantificationSettings, SeismicSettings, SeismicHazardCurve, SeismicFragility } from '@/lib/types';
+import type { PRAModel, BasicEvent, HouseEvent, Gate, FaultTree, EndState, Parameter, CCFGroup, InitiatingEvent, EventTree, Sequence, FunctionalEvent, Branch, GateType, GlobalQuantificationSettings, SeismicSettings, SeismicHazardCurve, SeismicFragility, RecoveryGroup, RecoveryRule } from '@/lib/types';
 
 // ===== Default Sample Model =====
 function createDefaultModel(): PRAModel {
@@ -1397,8 +1397,11 @@ interface ModelState {
   removeFlagGroup: (id: string) => void;
   
   // Recovery Management
-  addRecoveryRule: (rule: any) => void;
-  updateRecoveryRule: (id: string, updates: any) => void;
+  addRecoveryGroup: (group: RecoveryGroup) => void;
+  updateRecoveryGroup: (id: string, updates: Partial<RecoveryGroup>) => void;
+  removeRecoveryGroup: (id: string) => void;
+  addRecoveryRule: (rule: RecoveryRule) => void;
+  updateRecoveryRule: (id: string, updates: Partial<RecoveryRule>) => void;
   removeRecoveryRule: (id: string) => void;
 }
 
@@ -2690,6 +2693,30 @@ export const useModelStore = create<ModelState>((set, get) => ({
         }));
         // -----------------------------------------------
         
+        // --- Recovery Groups Migration & Auto-activation ---
+        if (!model.recoveryGroups) {
+          model.recoveryGroups = [];
+        }
+        if ((model.recoveryRules && model.recoveryRules.length > 0) && model.recoveryGroups.length === 0) {
+          const defaultGroup = {
+            id: uuidv4(),
+            name: model.locale === 'ja' ? 'デフォルト・リカバリーグループ' : 'Default Recovery Group',
+            description: model.locale === 'ja' ? '既存のリカバリールールから移行されたグループです。' : 'Migrated from legacy recovery rules.',
+            rules: model.recoveryRules
+          };
+          model.recoveryGroups = [defaultGroup];
+          model.activeRecoveryGroupId = defaultGroup.id;
+        }
+
+        // Auto-activate first group if none active
+        if (model.recoveryGroups && model.recoveryGroups.length > 0 && !model.activeRecoveryGroupId) {
+          model.activeRecoveryGroupId = model.recoveryGroups[0].id;
+        }
+        if (model.flagGroups && model.flagGroups.length > 0 && !model.activeFlagGroupId) {
+          model.activeFlagGroupId = model.flagGroups[0].id;
+        }
+        // -------------------------------------------------
+
         set({ model, isDirty: false, selectedFaultTreeId: model.faultTrees?.[0]?.id ?? null });
         return true;
       }
@@ -2785,14 +2812,19 @@ export const useModelStore = create<ModelState>((set, get) => ({
 
   addFlagGroup: (group) => {
     get().pushHistory();
-    set((state) => ({
-      model: {
-        ...state.model,
-        flagGroups: [...(state.model.flagGroups || []), group],
-        updatedAt: new Date().toISOString(),
-      },
-      isDirty: true,
-    }));
+    set((state) => {
+      const groups = [...(state.model.flagGroups || []), group];
+      const activeId = state.model.activeFlagGroupId || group.id;
+      return {
+        model: {
+          ...state.model,
+          flagGroups: groups,
+          activeFlagGroupId: activeId,
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
   },
 
   updateFlagGroup: (id, updates) => {
@@ -2820,39 +2852,150 @@ export const useModelStore = create<ModelState>((set, get) => ({
     }));
   },
 
-  addRecoveryRule: (rule) => {
+  addRecoveryGroup: (group) => {
+    get().pushHistory();
+    set((state) => {
+      const groups = [...(state.model.recoveryGroups || []), group];
+      const activeId = state.model.activeRecoveryGroupId || group.id;
+      return {
+        model: {
+          ...state.model,
+          recoveryGroups: groups,
+          activeRecoveryGroupId: activeId,
+          updatedAt: new Date().toISOString(),
+        },
+        isDirty: true,
+      };
+    });
+  },
+
+  updateRecoveryGroup: (id, updates) => {
     get().pushHistory();
     set((state) => ({
       model: {
         ...state.model,
-        recoveryRules: [...(state.model.recoveryRules || []), rule],
+        recoveryGroups: (state.model.recoveryGroups || []).map((g) => g.id === id ? { ...g, ...updates } : g),
         updatedAt: new Date().toISOString(),
       },
       isDirty: true,
     }));
+  },
+
+  removeRecoveryGroup: (id) => {
+    get().pushHistory();
+    set((state) => ({
+      model: {
+        ...state.model,
+        recoveryGroups: (state.model.recoveryGroups || []).filter((g) => g.id !== id),
+        activeRecoveryGroupId: state.model.activeRecoveryGroupId === id ? undefined : state.model.activeRecoveryGroupId,
+        updatedAt: new Date().toISOString(),
+      },
+      isDirty: true,
+    }));
+  },
+
+  addRecoveryRule: (rule) => {
+    get().pushHistory();
+    set((state) => {
+      const activeGroupId = state.model.activeRecoveryGroupId;
+      if (activeGroupId) {
+        const groups = (state.model.recoveryGroups || []).map(g => {
+          if (g.id === activeGroupId) {
+            return {
+              ...g,
+              rules: [...(g.rules || []), rule]
+            };
+          }
+          return g;
+        });
+        return {
+          model: {
+            ...state.model,
+            recoveryGroups: groups,
+            updatedAt: new Date().toISOString(),
+          },
+          isDirty: true,
+        };
+      } else {
+        return {
+          model: {
+            ...state.model,
+            recoveryRules: [...(state.model.recoveryRules || []), rule],
+            updatedAt: new Date().toISOString(),
+          },
+          isDirty: true,
+        };
+      }
+    });
   },
 
   updateRecoveryRule: (id, updates) => {
     get().pushHistory();
-    set((state) => ({
-      model: {
-        ...state.model,
-        recoveryRules: (state.model.recoveryRules || []).map((r) => r.id === id ? { ...r, ...updates } : r),
-        updatedAt: new Date().toISOString(),
-      },
-      isDirty: true,
-    }));
+    set((state) => {
+      const activeGroupId = state.model.activeRecoveryGroupId;
+      if (activeGroupId) {
+        const groups = (state.model.recoveryGroups || []).map(g => {
+          if (g.id === activeGroupId) {
+            return {
+              ...g,
+              rules: (g.rules || []).map(r => r.id === id ? { ...r, ...updates } : r)
+            };
+          }
+          return g;
+        });
+        return {
+          model: {
+            ...state.model,
+            recoveryGroups: groups,
+            updatedAt: new Date().toISOString(),
+          },
+          isDirty: true,
+        };
+      } else {
+        return {
+          model: {
+            ...state.model,
+            recoveryRules: (state.model.recoveryRules || []).map(r => r.id === id ? { ...r, ...updates } : r),
+            updatedAt: new Date().toISOString(),
+          },
+          isDirty: true,
+        };
+      }
+    });
   },
 
   removeRecoveryRule: (id) => {
     get().pushHistory();
-    set((state) => ({
-      model: {
-        ...state.model,
-        recoveryRules: (state.model.recoveryRules || []).filter((r) => r.id !== id),
-        updatedAt: new Date().toISOString(),
-      },
-      isDirty: true,
-    }));
+    set((state) => {
+      const activeGroupId = state.model.activeRecoveryGroupId;
+      if (activeGroupId) {
+        const groups = (state.model.recoveryGroups || []).map(g => {
+          if (g.id === activeGroupId) {
+            return {
+              ...g,
+              rules: (g.rules || []).filter(r => r.id !== id)
+            };
+          }
+          return g;
+        });
+        return {
+          model: {
+            ...state.model,
+            recoveryGroups: groups,
+            updatedAt: new Date().toISOString(),
+          },
+          isDirty: true,
+        };
+      } else {
+        return {
+          model: {
+            ...state.model,
+            recoveryRules: (state.model.recoveryRules || []).filter(r => r.id !== id),
+            updatedAt: new Date().toISOString(),
+          },
+          isDirty: true,
+        };
+      }
+    });
   }
 }));

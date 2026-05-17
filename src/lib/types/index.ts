@@ -164,6 +164,14 @@ export interface RecoveryRule {
   priority: number; // Order of application
 }
 
+export interface RecoveryGroup {
+  id: string;
+  name: string;
+  description?: string;
+  rules: RecoveryRule[];
+}
+
+
 // ===== CCF Group =====
 export interface CCFGroup {
   id: string;
@@ -252,7 +260,9 @@ export interface PRAModel {
   quantificationSettings: GlobalQuantificationSettings;
   flagGroups: FlagGroup[];
   recoveryRules: RecoveryRule[];
+  recoveryGroups?: RecoveryGroup[];
   activeFlagGroupId?: string;
+  activeRecoveryGroupId?: string;
 }
 
 // ===== Quantification Results =====

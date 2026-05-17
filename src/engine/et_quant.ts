@@ -35,13 +35,27 @@ export function quantifyEventTree(
 
   // 1. Prepare Flag Map for Logical Pruning first so it can override probabilities
   const flagMap = new Map<string, boolean>();
-  if (model.activeFlagGroupId) {
-    const flagGroup = model.flagGroups?.find(fg => fg.id === model.activeFlagGroupId);
-    if (flagGroup) {
-      flagGroup.items.forEach(item => {
-        flagMap.set(item.eventId, item.state);
-      });
+  let activeFlagGroup = model.flagGroups?.find(fg => fg.id === model.activeFlagGroupId);
+  if (!activeFlagGroup && model.flagGroups && model.flagGroups.length > 0) {
+    activeFlagGroup = model.flagGroups[0];
+  }
+  if (activeFlagGroup) {
+    activeFlagGroup.items.forEach(item => {
+      flagMap.set(item.eventId, item.state);
+    });
+  }
+
+  // 1.5 Prepare Active Recovery Rules
+  let recoveryRules = model.recoveryRules || [];
+  if (model.activeRecoveryGroupId) {
+    const recoveryGroup = model.recoveryGroups?.find(g => g.id === model.activeRecoveryGroupId);
+    if (recoveryGroup) {
+      recoveryRules = recoveryGroup.rules || [];
+    } else {
+      recoveryRules = [];
     }
+  } else if (model.recoveryGroups && model.recoveryGroups.length > 0) {
+    recoveryRules = model.recoveryGroups[0]?.rules || [];
   }
 
   // 2. Prepare probability map and variable order using the same logic as Fault Tree engine
@@ -273,7 +287,7 @@ export function quantifyEventTree(
     // Apply Recovery Rules to Sequence Cutsets
     const { processedCutsets: recoveredCutSets, appliedCount: seqAppliedCount } = applyRecoveryRules(
       seqCutSets,
-      model.recoveryRules || [],
+      recoveryRules,
       probabilities
     );
 
@@ -368,7 +382,7 @@ export function quantifyEventTree(
   // Apply Recovery Rules to Total Risk Cutsets
   const { processedCutsets: recoveredCutSets, appliedCount: totalAppliedCount } = applyRecoveryRules(
     cutSets,
-    model.recoveryRules || [],
+    recoveryRules,
     probabilities
   );
 

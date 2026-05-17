@@ -73,7 +73,8 @@ export const useYjsStore = create<YjsState>((set, get) => {
       provider.awareness.setLocalStateField('user', { name: userName, color: userColor });
       
       provider.awareness.on('change', () => {
-        const users = Array.from(provider!.awareness.getStates().values())
+        if (!provider) return;
+        const users = Array.from(provider.awareness.getStates().values())
           .map((state: any) => state.user)
           .filter(Boolean) as YjsUser[];
         set({ users });

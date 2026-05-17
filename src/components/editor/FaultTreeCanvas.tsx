@@ -260,8 +260,19 @@ export default function FaultTreeCanvas({
     const ft = model.faultTrees?.find((t) => t.id === selectedFaultTreeId);
     if (!ft) return { nodes: [], edges: [] };
 
-    const activeFlagGroup = model.flagGroups?.find(g => g.id === model.activeFlagGroupId);
-    const recoveryRules = model.recoveryRules || [];
+    let activeFlagGroup = model.flagGroups?.find(g => g.id === model.activeFlagGroupId);
+    if (!activeFlagGroup && model.flagGroups && model.flagGroups.length > 0) {
+      activeFlagGroup = model.flagGroups[0];
+    }
+    
+    // Resolve active recovery rules based on activeRecoveryGroupId
+    let recoveryRules = model.recoveryRules || [];
+    if (model.activeRecoveryGroupId) {
+      const activeGroup = model.recoveryGroups?.find(g => g.id === model.activeRecoveryGroupId);
+      recoveryRules = activeGroup ? activeGroup.rules || [] : [];
+    } else if (model.recoveryGroups && model.recoveryGroups.length > 0) {
+      recoveryRules = model.recoveryGroups[0]?.rules || [];
+    }
 
     const nodes: Node<FTNodeData>[] = [];
     const edges: Edge[] = [];

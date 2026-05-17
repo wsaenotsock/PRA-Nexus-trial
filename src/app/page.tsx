@@ -572,8 +572,8 @@ export default function Home() {
           style={{ cursor: 'pointer', paddingLeft: '12px' }}
           title={locale === 'ja' ? 'Quantica Riskの詳細を見る (新しいタブ)' : 'View Quantica Risk Details (New Tab)'}
         >
-          <div className="app-header__logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px', width: 'auto', background: 'none', border: 'none', boxShadow: 'none' }}>
-            <QuanticaLogo theme={theme} style={{ height: '40px' }} />
+          <div className="app-header__logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '70px', width: '126px', minHeight: '70px', minWidth: '126px', flexShrink: 0, background: 'none', border: 'none', boxShadow: 'none', zIndex: 101 }}>
+            <QuanticaLogo theme={theme} style={{ height: '70px', width: '126px', minHeight: '70px', minWidth: '126px', flexShrink: 0 }} />
           </div>
           <span className="app-header__subtitle" style={{ marginLeft: '12px', borderLeft: '1px solid var(--border-default)', paddingLeft: '12px' }}>
             {locale === 'ja' ? '静的PRA解析' : 'Static PRA Analysis'}
