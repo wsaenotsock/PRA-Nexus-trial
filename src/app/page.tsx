@@ -732,7 +732,7 @@ export default function Home() {
             rel="noopener noreferrer"
             className="btn btn--secondary"
             title="PRA Knowledge Intelligence Platform"
-            style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
+            style={{ fontWeight: 600, textDecoration: 'none', boxSizing: 'border-box' }}
           >
             <span style={{ fontSize: '14px' }}>📖</span> 
             PRA Episteme
