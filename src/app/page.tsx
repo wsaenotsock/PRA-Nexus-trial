@@ -726,17 +726,15 @@ export default function Home() {
           <div className="toolbar__separator" />
 
           {/* PRA Episteme Link */}
-          <a
-            href="https://pra-episteme.vercel.app/"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
             className="btn btn--secondary"
             title="PRA Knowledge Intelligence Platform"
-            style={{ fontWeight: 600, textDecoration: 'none', boxSizing: 'border-box' }}
+            style={{ fontWeight: 600 }}
+            onClick={() => window.open('https://pra-episteme.vercel.app/', '_blank', 'noopener,noreferrer')}
           >
             <span style={{ fontSize: '14px' }}>📖</span> 
             PRA Episteme
-          </a>
+          </button>
 
           {/* Model Export / Import */}
           <button
