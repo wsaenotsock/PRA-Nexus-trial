@@ -37,13 +37,13 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   activeProjectId: null,
   versions: [],
   isLoading: false,
-  userName: typeof window !== 'undefined' ? localStorage.getItem('pra-nexus-username') || '' : '',
+  userName: typeof window !== 'undefined' ? localStorage.getItem('quantica-risk-username') || '' : '',
   diffResult: null,
   diffVersions: null,
 
   setUserName: (name) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('pra-nexus-username', name);
+      localStorage.setItem('quantica-risk-username', name);
     }
     set({ userName: name });
   },

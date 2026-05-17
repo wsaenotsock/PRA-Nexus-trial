@@ -260,6 +260,9 @@ export default function FaultTreeCanvas({
     const ft = model.faultTrees?.find((t) => t.id === selectedFaultTreeId);
     if (!ft) return { nodes: [], edges: [] };
 
+    const activeFlagGroup = model.flagGroups?.find(g => g.id === model.activeFlagGroupId);
+    const recoveryRules = model.recoveryRules || [];
+
     const nodes: Node<FTNodeData>[] = [];
     const edges: Edge[] = [];
     const processedNodes = new Set<string>();
@@ -312,6 +315,22 @@ export default function FaultTreeCanvas({
           },
         });
 
+        // Gates can also be flagged if we allow it, but usually it's basic/house events.
+        // For now, let's check if the gate's realId is in flags or recovery.
+        const gateRealId = gate.id;
+        const gateFlag = activeFlagGroup?.items.find(item => item.eventId === gateRealId);
+        const isGateInRecovery = recoveryRules.some(r => r.condition.includes(gateRealId) || r.targetEventId === gateRealId);
+
+        if (gateFlag || isGateInRecovery) {
+          const lastNode = nodes[nodes.length - 1];
+          lastNode.data = {
+            ...lastNode.data,
+            isFlagged: !!gateFlag,
+            flagState: gateFlag?.state,
+            isRecovery: isGateInRecovery
+          };
+        }
+
         if (gate.collapsed) return;
 
         for (const childId of gate.children) {
@@ -336,7 +355,10 @@ export default function FaultTreeCanvas({
           processedNodes.add(nodeId);
         }
 
-        const be = model.basicEvents.find((e) => e.id === nodeId);
+        const foundBe = model.basicEvents.find((e) => e.id === nodeId);
+        const foundHe = model.houseEvents?.find((e) => e.id === nodeId);
+        const be = foundBe || foundHe;
+
         if (be) {
           // Compose visual unique ID in tree mode, otherwise use the actual basic event ID
           const renderId = (viewMode === 'tree' && parentId) ? `${parentId}::${nodeId}` : nodeId;
@@ -369,9 +391,14 @@ export default function FaultTreeCanvas({
             }
           }
 
-          const resolvedNodeType = be.eventType || 'basicEvent';
+          const isHouseEvent = !!foundHe || (foundBe?.eventType === 'houseEvent');
+          const resolvedNodeType = isHouseEvent ? 'houseEvent' : (foundBe?.eventType || 'basicEvent');
+          
+          // Cast be to any to avoid TS errors on missing properties between BasicEvent and HouseEvent
+          const beAny = be as any;
+
           const isCCF = (model.ccfGroups || []).some(g => g.members.includes(be.id));
-          const param = (model.parameters || []).find((p) => p.id === be.parameterId);
+          const param = (model.parameters || []).find((p) => p.id === beAny.parameterId);
           const parameterName = param ? param.name : undefined;
           
           nodes.push({
@@ -385,14 +412,26 @@ export default function FaultTreeCanvas({
             data: {
               label: be.name,
               nodeType: resolvedNodeType,
-              eventId: be.eventId || be.id,
-              probability: be.probability ?? (be.failureRate * (be.missionTime ?? 24)),
-              failureType: be.failureType,
-              parameterId: be.parameterId,
+              eventId: beAny.eventId || be.id,
+              probability: beAny.probability ?? (beAny.failureRate ? (beAny.failureRate * (beAny.missionTime ?? 24)) : (isHouseEvent ? (beAny.state ? 1 : 0) : undefined)),
+              failureType: beAny.failureType,
+              parameterId: beAny.parameterId,
               parameterName,
               isCCF,
               isDropTarget: dragOverNodeId === renderId,
               id: be.id, // Holds true model ID
+              isFlagged: !!activeFlagGroup?.items.some(item => 
+                item.eventId === be.id || (beAny.eventId && item.eventId === beAny.eventId)
+              ),
+              flagState: activeFlagGroup?.items.find(item => 
+                item.eventId === be.id || (beAny.eventId && item.eventId === beAny.eventId)
+              )?.state,
+              isRecovery: recoveryRules.some(r => 
+                r.condition.includes(be.id) || 
+                (beAny.eventId && r.condition.includes(beAny.eventId)) ||
+                r.targetEventId === be.id ||
+                (beAny.eventId && r.targetEventId === beAny.eventId)
+              ),
             },
           });
         }
@@ -403,7 +442,8 @@ export default function FaultTreeCanvas({
     // This handles the top event, orphaned trees, and truly isolated nodes in a single pass.
     const roots = [
       ...ft.gates.filter(g => !allChildIds.has(g.id)).map(g => g.id),
-      ...model.basicEvents.filter(be => !allChildIdsGlobal.has(be.id)).map(be => be.id)
+      ...model.basicEvents.filter(be => !allChildIdsGlobal.has(be.id)).map(be => be.id),
+      ...(model.houseEvents || []).filter(he => !allChildIdsGlobal.has(he.id)).map(he => he.id)
     ];
 
     roots.forEach(rootId => processNode(rootId));

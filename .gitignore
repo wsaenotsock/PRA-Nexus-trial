@@ -39,3 +39,22 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
+
+# temporary and test scripts
+analyze_et_issue.js
+analyze_et_issue_2.js
+apply_latest_model.js
+compare_models.js
+diag_order.ts
+dump_range.js
+feedback/
+force_inject_model.js
+new_model.json
+repro.ts
+test_ft16.ts
+test_prune.ts
+verify_cors_server.js
+verify_prune.ts
+

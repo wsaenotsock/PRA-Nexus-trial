@@ -121,6 +121,54 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
   React.useEffect(() => {
     setCurrentPage(1);
   }, [selectedSeqId, result, activeTab, pageSize]);
+  const selectedMethods: string[] = React.useMemo(() => {
+    const raw = model.quantificationSettings?.approximation;
+    const arr = Array.isArray(raw) ? [...raw] : (raw ? [raw] : ['bdd_exact']);
+    const finalArr = arr.length > 0 ? arr : ['bdd_exact']; // fallback
+    
+    // Enforce explicit display order: BDD -> MCUB -> Rare Event
+    const order: Record<string, number> = { 'bdd_exact': 0, 'mcub': 1, 'rare_event': 2 };
+    return finalArr.sort((a, b) => (order[a] ?? 99) - (order[b] ?? 99));
+  }, [model.quantificationSettings?.approximation]);
+
+  const computedValues = React.useMemo(() => {
+    if (!result || !result.cutSets) return { bdd_exact: result?.topEventProbability ?? 0, rare_event: 0, mcub: 0 };
+    
+    // Rare Event
+    let sum = 0;
+    for (const cs of result.cutSets) sum += cs.probability;
+    const rareVal = Math.min(sum, 1);
+
+    // MCUB
+    let prod = 1;
+    for (const cs of result.cutSets) prod *= (1 - Math.min(cs.probability, 1));
+    const mcubVal = 1 - prod;
+
+    return {
+      bdd_exact: result.topEventProbability,
+      rare_event: rareVal,
+      mcub: mcubVal
+    };
+  }, [result, result?.cutSets, result?.topEventProbability]);
+
+  const targetOptions = useMemo(() => {
+    const opts: { id: string; label: string }[] = [];
+    
+    // Include individual quantified results
+    Object.keys(results).forEach(rid => {
+      const ft = model.faultTrees.find(f => f.id === rid);
+      const et = model.eventTrees.find(e => e.id === rid);
+      const label = ft ? `🌳 ${ft.name}` : (et ? `🌿 ${et.name}` : `ID: ${rid}`);
+      opts.push({ id: rid, label });
+    });
+
+    // Insert Consolidated Total at the beginning if more than 1
+    if (Object.keys(results).length > 1) {
+      opts.unshift({ id: '__total_aggregated__', label: locale === 'ja' ? '📊 総合結果 (Consolidated)' : '📊 Total Consolidated' });
+    }
+    
+    return opts;
+  }, [results, model.faultTrees, model.eventTrees, locale]);
 
   if (isComputing) {
     return (
@@ -207,35 +255,6 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
     }
     return 0;
   };
-  const selectedMethods: string[] = React.useMemo(() => {
-    const raw = model.quantificationSettings?.approximation;
-    const arr = Array.isArray(raw) ? [...raw] : (raw ? [raw] : ['bdd_exact']);
-    const finalArr = arr.length > 0 ? arr : ['bdd_exact']; // fallback
-    
-    // Enforce explicit display order: BDD -> MCUB -> Rare Event
-    const order: Record<string, number> = { 'bdd_exact': 0, 'mcub': 1, 'rare_event': 2 };
-    return finalArr.sort((a, b) => (order[a] ?? 99) - (order[b] ?? 99));
-  }, [model.quantificationSettings?.approximation]);
-
-  const computedValues = React.useMemo(() => {
-    if (!result.cutSets) return { bdd_exact: result.topEventProbability, rare_event: 0, mcub: 0 };
-    
-    // Rare Event
-    let sum = 0;
-    for (const cs of result.cutSets) sum += cs.probability;
-    const rareVal = Math.min(sum, 1);
-
-    // MCUB
-    let prod = 1;
-    for (const cs of result.cutSets) prod *= (1 - Math.min(cs.probability, 1));
-    const mcubVal = 1 - prod;
-
-    return {
-      bdd_exact: result.topEventProbability,
-      rare_event: rareVal,
-      mcub: mcubVal
-    };
-  }, [result.cutSets, result.topEventProbability]);
 
   const getMethodLabel = (m: string) => {
     switch(m) {
@@ -248,25 +267,6 @@ export default function ResultsDashboard({ locale = 'ja' }: ResultsDashboardProp
 
   const primaryMethod = selectedMethods[0];
   const secondaryMethods = selectedMethods.slice(1);
-
-  const targetOptions = useMemo(() => {
-    const opts: { id: string; label: string }[] = [];
-    
-    // Include individual quantified results
-    Object.keys(results).forEach(rid => {
-      const ft = model.faultTrees.find(f => f.id === rid);
-      const et = model.eventTrees.find(e => e.id === rid);
-      const label = ft ? `🌳 ${ft.name}` : (et ? `🌿 ${et.name}` : `ID: ${rid}`);
-      opts.push({ id: rid, label });
-    });
-
-    // Insert Consolidated Total at the beginning if more than 1
-    if (Object.keys(results).length > 1) {
-      opts.unshift({ id: '__total_aggregated__', label: locale === 'ja' ? '📊 総合結果 (Consolidated)' : '📊 Total Consolidated' });
-    }
-    
-    return opts;
-  }, [results, model.faultTrees, model.eventTrees, locale]);
 
   return (
     <div className="animate-fadeIn" style={{

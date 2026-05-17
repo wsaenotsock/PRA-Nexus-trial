@@ -1390,6 +1390,16 @@ interface ModelState {
   saveToLocalStorage: () => Promise<void>;
   loadFromLocalStorage: () => Promise<boolean>;
   convertToSubtree: (faultTreeId: string, gateId: string) => void;
+  
+  // Flag Management
+  addFlagGroup: (group: any) => void;
+  updateFlagGroup: (id: string, updates: any) => void;
+  removeFlagGroup: (id: string) => void;
+  
+  // Recovery Management
+  addRecoveryRule: (rule: any) => void;
+  updateRecoveryRule: (id: string, updates: any) => void;
+  removeRecoveryRule: (id: string) => void;
 }
 
 export const useModelStore = create<ModelState>((set, get) => ({
@@ -1430,10 +1440,10 @@ export const useModelStore = create<ModelState>((set, get) => ({
       // Force update legacy enablePruning = true once to respect the new default-off policy for loaded models as well.
       // UPGRADED v8: Directly commit the sanitized state to individual project storage to prevent synced state rollbacks.
       if (updatedModel.quantificationSettings.enablePruning === undefined || 
-          (typeof window !== 'undefined' && !window.localStorage.getItem('pra-nexus-pruning-v8-storage-setmodel-sync'))) {
+          (typeof window !== 'undefined' && !window.localStorage.getItem('quantica-risk-pruning-v8-storage-setmodel-sync'))) {
         updatedModel.quantificationSettings.enablePruning = false;
         if (typeof window !== 'undefined') {
-          window.localStorage.setItem('pra-nexus-pruning-v8-storage-setmodel-sync', 'done');
+          window.localStorage.setItem('quantica-risk-pruning-v8-storage-setmodel-sync', 'done');
           // Persist changes immediately down to the persistent layer to fix corruption
           try {
             localStorage.setItem(`pra_project_model_${updatedModel.id}`, JSON.stringify(updatedModel));
@@ -1457,8 +1467,12 @@ export const useModelStore = create<ModelState>((set, get) => ({
       isDirty: false, 
       past: [], 
       future: [],
-      selectedFaultTreeId: updatedModel.faultTrees?.[0]?.id ?? null,
-      selectedEventTreeId: updatedModel.eventTrees?.[0]?.id ?? null
+      selectedFaultTreeId: (updatedModel.faultTrees?.some(ft => ft.id === get().selectedFaultTreeId)) 
+        ? get().selectedFaultTreeId 
+        : (updatedModel.faultTrees?.[0]?.id ?? null),
+      selectedEventTreeId: (updatedModel.eventTrees?.some(et => et.id === get().selectedEventTreeId))
+        ? get().selectedEventTreeId
+        : (updatedModel.eventTrees?.[0]?.id ?? null)
     });
   },
 
@@ -2506,11 +2520,11 @@ export const useModelStore = create<ModelState>((set, get) => ({
     const { model } = get();
     try {
       // 1. まず大容量データを安全に保持できる IndexedDB への保存を実行（容量上限なし）
-      await setIDBItem('pra-nexus-model', model);
+      await setIDBItem('quantica-risk-model', model);
 
       // 2. 互換性のために、サイズが許せば localStorage にも保存を試みる（容量超過例外をキャッチして無視）
       try {
-        localStorage.setItem('pra-nexus-model', JSON.stringify(model));
+        localStorage.setItem('quantica-risk-model', JSON.stringify(model));
       } catch (quotaError) {
         console.warn('localStorage storage limit exceeded, but successfully saved to IndexedDB (No Quota Limit)!', quotaError);
       }
@@ -2524,11 +2538,11 @@ export const useModelStore = create<ModelState>((set, get) => ({
   loadFromLocalStorage: async () => {
     try {
       // 1. まず IndexedDB からの読み込みを実行
-      let parsed = await getIDBItem('pra-nexus-model');
+      let parsed = await getIDBItem('quantica-risk-model');
 
       // 2. 無ければ従来の localStorage からフォールバック読み込み
       if (!parsed) {
-        const data = localStorage.getItem('pra-nexus-model');
+        const data = localStorage.getItem('quantica-risk-model');
         if (data) {
           parsed = JSON.parse(data) as any;
         }
@@ -2545,9 +2559,9 @@ export const useModelStore = create<ModelState>((set, get) => ({
         if (parsed.id === defaultModel.id || hasOldFTs || !hasLatestFTs) {
           if (hasOldFTs || !hasLatestFTs || !parsed.updatedAt || new Date(parsed.updatedAt) < new Date(defaultModel.updatedAt)) {
             parsed = defaultModel;
-            await setIDBItem('pra-nexus-model', defaultModel);
+            await setIDBItem('quantica-risk-model', defaultModel);
             try {
-              localStorage.setItem('pra-nexus-model', JSON.stringify(defaultModel));
+              localStorage.setItem('quantica-risk-model', JSON.stringify(defaultModel));
             } catch (_) {}
           }
         }
@@ -2601,11 +2615,11 @@ export const useModelStore = create<ModelState>((set, get) => ({
         } else {
           // Force update legacy default values
           // Force reset legacy cutoff to 1e-20 once for existing users to respect the new default policy.
-          if (typeof window !== 'undefined' && !window.localStorage.getItem('pra-nexus-cutoff-v3-reset')) {
+          if (typeof window !== 'undefined' && !window.localStorage.getItem('quantica-risk-cutoff-v3-reset')) {
             parsed.quantificationSettings.cutOff = 1e-20;
             parsed.quantificationSettings.bddCutOff = 1e-20;
             if (typeof window !== 'undefined') {
-              window.localStorage.setItem('pra-nexus-cutoff-v3-reset', 'done');
+              window.localStorage.setItem('quantica-risk-cutoff-v3-reset', 'done');
             }
           } else {
             // Fallback legacy checks just in case
@@ -2619,14 +2633,14 @@ export const useModelStore = create<ModelState>((set, get) => ({
           // Force update legacy enablePruning = true once to respect the new default-off policy for existing users.
           // UPGRADED v8: Directly commit changes back to storage immediately so other components read clean state.
           if (parsed.quantificationSettings.enablePruning === undefined || 
-              (typeof window !== 'undefined' && !window.localStorage.getItem('pra-nexus-pruning-v8-storage-load-sync'))) {
+              (typeof window !== 'undefined' && !window.localStorage.getItem('quantica-risk-pruning-v8-storage-load-sync'))) {
             parsed.quantificationSettings.enablePruning = false;
             if (typeof window !== 'undefined') {
-              window.localStorage.setItem('pra-nexus-pruning-v8-storage-load-sync', 'done');
+              window.localStorage.setItem('quantica-risk-pruning-v8-storage-load-sync', 'done');
               // Force write-through cache right now to eradicate memory-only race conditions!
-              await setIDBItem('pra-nexus-model', parsed);
+              await setIDBItem('quantica-risk-model', parsed);
               try {
-                localStorage.setItem('pra-nexus-model', JSON.stringify(parsed));
+                localStorage.setItem('quantica-risk-model', JSON.stringify(parsed));
               } catch (_) {}
             }
           }
@@ -2767,5 +2781,78 @@ export const useModelStore = create<ModelState>((set, get) => ({
     if (newlyCreatedFTId) {
       setTimeout(() => get().autoLayout(newlyCreatedFTId!), 100);
     }
+  },
+
+  addFlagGroup: (group) => {
+    get().pushHistory();
+    set((state) => ({
+      model: {
+        ...state.model,
+        flagGroups: [...(state.model.flagGroups || []), group],
+        updatedAt: new Date().toISOString(),
+      },
+      isDirty: true,
+    }));
+  },
+
+  updateFlagGroup: (id, updates) => {
+    get().pushHistory();
+    set((state) => ({
+      model: {
+        ...state.model,
+        flagGroups: (state.model.flagGroups || []).map((g) => g.id === id ? { ...g, ...updates } : g),
+        updatedAt: new Date().toISOString(),
+      },
+      isDirty: true,
+    }));
+  },
+
+  removeFlagGroup: (id) => {
+    get().pushHistory();
+    set((state) => ({
+      model: {
+        ...state.model,
+        flagGroups: (state.model.flagGroups || []).filter((g) => g.id !== id),
+        activeFlagGroupId: state.model.activeFlagGroupId === id ? undefined : state.model.activeFlagGroupId,
+        updatedAt: new Date().toISOString(),
+      },
+      isDirty: true,
+    }));
+  },
+
+  addRecoveryRule: (rule) => {
+    get().pushHistory();
+    set((state) => ({
+      model: {
+        ...state.model,
+        recoveryRules: [...(state.model.recoveryRules || []), rule],
+        updatedAt: new Date().toISOString(),
+      },
+      isDirty: true,
+    }));
+  },
+
+  updateRecoveryRule: (id, updates) => {
+    get().pushHistory();
+    set((state) => ({
+      model: {
+        ...state.model,
+        recoveryRules: (state.model.recoveryRules || []).map((r) => r.id === id ? { ...r, ...updates } : r),
+        updatedAt: new Date().toISOString(),
+      },
+      isDirty: true,
+    }));
+  },
+
+  removeRecoveryRule: (id) => {
+    get().pushHistory();
+    set((state) => ({
+      model: {
+        ...state.model,
+        recoveryRules: (state.model.recoveryRules || []).filter((r) => r.id !== id),
+        updatedAt: new Date().toISOString(),
+      },
+      isDirty: true,
+    }));
   }
 }));

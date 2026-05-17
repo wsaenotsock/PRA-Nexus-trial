@@ -18,6 +18,7 @@ import {
   rareEventApprox,
   mcubApprox
 } from './bdd';
+import { applyRecoveryRules } from './post_process';
 
 /**
  * Quantifies an Event Tree using BDD logic to support MCS and Importance.
@@ -32,7 +33,18 @@ export function quantifyEventTree(
   // 1. Reset BDD state
   resetBDD();
 
-  // 1. Prepare probability map and variable order using the same logic as Fault Tree engine
+  // 1. Prepare Flag Map for Logical Pruning first so it can override probabilities
+  const flagMap = new Map<string, boolean>();
+  if (model.activeFlagGroupId) {
+    const flagGroup = model.flagGroups?.find(fg => fg.id === model.activeFlagGroupId);
+    if (flagGroup) {
+      flagGroup.items.forEach(item => {
+        flagMap.set(item.eventId, item.state);
+      });
+    }
+  }
+
+  // 2. Prepare probability map and variable order using the same logic as Fault Tree engine
   const probabilities = new Map<string, number>();
   
   // Resolve all basic event probabilities first
@@ -54,6 +66,25 @@ export function quantifyEventTree(
         // But 0 is safer if the user hasn't specified. Let's use 24 for backward compat if needed,
         // but the user likely wants their actual mission time.
     }
+
+    // Apply Flag Override if active
+    let isFlagOverridden = false;
+    let flagState = false;
+    if (flagMap.has(be.id)) {
+      isFlagOverridden = true;
+      flagState = flagMap.get(be.id)!;
+    } else {
+      const beAny = be as any;
+      if (beAny.eventId && flagMap.has(beAny.eventId)) {
+        isFlagOverridden = true;
+        flagState = flagMap.get(beAny.eventId)!;
+      }
+    }
+
+    if (isFlagOverridden) {
+      p = flagState ? 1.0 : 0.0;
+    }
+
     probabilities.set(be.id, Math.min(p || 0, 1));
   });
 
@@ -62,7 +93,7 @@ export function quantifyEventTree(
     probabilities.set(ie.id, ie.frequency);
   }
 
-  // 2. Pre-compute Global Variable Order for consistent BDD logic
+  // 3. Pre-compute Global Variable Order for consistent BDD logic
   // To correctly combine BDDs from different FTs in the ET, we MUST use a single shared global variable order.
   const referencedFTIds = new Set<string>();
   if (ie && ie.linkedFaultTreeId) referencedFTIds.add(ie.linkedFaultTreeId);
@@ -91,7 +122,7 @@ export function quantifyEventTree(
     
     // IMPORTANT: Use the uniform shared globalVariableOrder to prevent crashes/corruption!
     // Also passing user bddCutOff value for radical graph compression / pruning!
-    const bdd = buildBDD(ft.topGateId, ft.gates, model.basicEvents, globalVariableOrder, model.faultTrees, new Set(), new Map(), bddCutoff);
+    const bdd = buildBDD(ft.topGateId, ft.gates, model.basicEvents, globalVariableOrder, model.faultTrees, new Set(), new Map(), bddCutoff, new Map(), flagMap);
     ftBDDCache.set(ftId, bdd);
     return bdd;
   };
@@ -237,21 +268,32 @@ export function quantifyEventTree(
         probability: prob,
         order: cs.length
       };
-    }).sort((a, b) => b.probability - a.probability).slice(0, 50);
+    }).sort((a, b) => b.probability - a.probability);
+
+    // Apply Recovery Rules to Sequence Cutsets
+    const { processedCutsets: recoveredCutSets, appliedCount: seqAppliedCount } = applyRecoveryRules(
+      seqCutSets,
+      model.recoveryRules || [],
+      probabilities
+    );
+
+    // Re-calculate sequence frequency based on post-processed cutsets
+    const recoveredFreq = method === 'mcub' ? mcubApprox(recoveredCutSets) : rareEventApprox(recoveredCutSets);
 
     // Calculate importance for this sequence (skip if success)
     const seqImportance = !isSuccessState 
-      ? calculateImportanceMeasures(seqBDD, model.basicEvents, seqFreq, probabilities)
+      ? calculateImportanceMeasures(seqBDD, model.basicEvents, recoveredFreq, probabilities)
       : [];
 
     sequenceResults.push({
       sequenceId: seq.id,
       sequenceName: seq.name || seq.id,
       pathDescription: pathDesc.trim(),
-      frequency: seqFreq,
-      cutSets: seqCutSets,
+      frequency: recoveredFreq,
+      cutSets: recoveredCutSets.slice(0, 50),
       rawCutSetCount: seqRawMCS.length,
-      importanceMeasures: seqImportance
+      importanceMeasures: seqImportance,
+      appliedRecoveryCount: seqAppliedCount
     });
 
     if (seq.endStateId) {
@@ -265,17 +307,17 @@ export function quantifyEventTree(
       const isPruningEnabled = model.quantificationSettings?.enablePruning === true;
       const bddCutoff = isPruningEnabled ? (model.quantificationSettings?.bddCutOff ?? 1e-20) : 0;
       if (es && !isSuccess) {
-        if (seqFreq >= bddCutoff) {
-          console.log(`      [ET-LOG] Aggregating significant sequence ${seq.id} (freq: ${seqFreq}) into totalRiskBDD...`);
+        if (recoveredFreq >= bddCutoff) {
+          console.log(`      [ET-LOG] Aggregating significant sequence ${seq.id} (freq: ${recoveredFreq}) into totalRiskBDD...`);
           totalRiskBDD = bddOr(totalRiskBDD, seqBDD);
           console.log(`      [ET-LOG] SUCCESS aggregating ${seq.id}.`);
         } else {
-          console.log(`      [ET-LOG] Skipping aggregation of trivial sequence ${seq.id} (freq: ${seqFreq} < bddCutoff).`);
+          console.log(`      [ET-LOG] Skipping aggregation of trivial sequence ${seq.id} (freq: ${recoveredFreq} < bddCutoff).`);
         }
       }
       
       const current = endStateFreqMap.get(seq.endStateId) || 0;
-      endStateFreqMap.set(seq.endStateId, current + seqFreq);
+      endStateFreqMap.set(seq.endStateId, current + recoveredFreq);
     }
   };
 
@@ -321,34 +363,44 @@ export function quantifyEventTree(
       probability: prob,
       order: cs.length
     };
-  }).sort((a, b) => b.probability - a.probability).slice(0, 100);
+  }).sort((a, b) => b.probability - a.probability);
+
+  // Apply Recovery Rules to Total Risk Cutsets
+  const { processedCutsets: recoveredCutSets, appliedCount: totalAppliedCount } = applyRecoveryRules(
+    cutSets,
+    model.recoveryRules || [],
+    probabilities
+  );
+
+  const totalRecoveredFreq = method === 'mcub' ? mcubApprox(recoveredCutSets) : rareEventApprox(recoveredCutSets);
 
   const importanceMeasures = calculateImportanceMeasures(
     totalRiskBDD,
     model.basicEvents,
-    totalNonSuccessFreq,
+    totalRecoveredFreq,
     probabilities
   );
 
   const computeTimeMs = performance.now() - startTime;
 
   const topEventProbabilityApprox = method === 'mcub'
-    ? mcubApprox(cutSets)
-    : rareEventApprox(cutSets);
+    ? mcubApprox(recoveredCutSets)
+    : rareEventApprox(recoveredCutSets);
 
   return {
-    topEventProbability: totalNonSuccessFreq,
+    topEventProbability: totalRecoveredFreq,
     topEventProbabilityApprox: topEventProbabilityApprox,
-    cutSets,
+    cutSets: recoveredCutSets.slice(0, 100),
     rawCutSetCount: rawMCS.length,
     importanceMeasures,
-    totalCDF: totalNonSuccessFreq,
+    totalCDF: totalRecoveredFreq,
     totalRiskBDD, // Exported for Monte Carlo
     sequenceBDDs,
     endStateResults,
     sequenceResults,
     computeTimeMs,
     method: method,
-    baseProbabilities: Object.fromEntries(probabilities)
+    baseProbabilities: Object.fromEntries(probabilities),
+    appliedRecoveryCount: totalAppliedCount
   };
 }

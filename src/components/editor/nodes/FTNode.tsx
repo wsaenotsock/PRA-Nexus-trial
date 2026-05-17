@@ -1,8 +1,8 @@
 'use client';
 
 import React, { memo } from 'react';
-import { Handle, Position, type NodeProps, type Node } from '@xyflow/react';
-import type { FTNodeData } from '@/lib/types';
+import { Handle, Position } from '@xyflow/react';
+import type { FTNodeData, FTNodeType, GateType } from '@/lib/types';
 
 // ===== AND Gate SVG Symbol =====
 function ANDGateSymbol() {
@@ -146,12 +146,16 @@ function GateSymbol({ nodeType, gateType, k, failureType, hasParameter }: { node
 const FTNode = memo((props: any) => {
   const { data, selected } = props;
   const label = String(data.label || '');
-  const nodeType = String(data.nodeType || '');
+  const nodeType = String(data.nodeType || '') as FTNodeType;
   const probability = data.probability;
   const k = data.k;
   const collapsed = !!data.collapsed;
   const isGate = ['andGate', 'orGate', 'atleastGate', 'topEvent'].includes(nodeType);
   const isDropTarget = !!data.isDropTarget;
+
+  const [flagHovered, setFlagHovered] = React.useState(false);
+  const [recHovered, setRecHovered] = React.useState(false);
+  const [ccfHovered, setCcfHovered] = React.useState(false);
 
   return (
     <div
@@ -254,23 +258,119 @@ const FTNode = memo((props: any) => {
 
       {/* CCF設定済みバッジの表示 */}
       {!!data.isCCF && (
-        <div style={{
-          position: 'absolute',
-          top: 6,
-          right: 6,
-          background: 'var(--accent-red)',
-          color: '#fff',
-          fontSize: '8px',
-          fontWeight: 'bold',
-          padding: '2px 5px',
-          borderRadius: '4px',
-          boxShadow: 'var(--shadow-sm)',
-          zIndex: 10,
-          letterSpacing: '0.5px'
-        }}>
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            window.dispatchEvent(new CustomEvent('app-navigate', {
+              detail: { viewMode: 'data', tab: 'ccf', targetId: props.id }
+            }));
+          }}
+          onMouseEnter={() => setCcfHovered(true)}
+          onMouseLeave={() => setCcfHovered(false)}
+          style={{
+            position: 'absolute',
+            top: 6,
+            right: 6,
+            background: 'var(--accent-red)',
+            color: '#fff',
+            fontSize: '8px',
+            fontWeight: 'bold',
+            padding: '2px 5px',
+            borderRadius: '4px',
+            boxShadow: ccfHovered ? 'var(--shadow-lg)' : 'var(--shadow-sm)',
+            zIndex: 10,
+            letterSpacing: '0.5px',
+            cursor: 'pointer',
+            transform: ccfHovered ? 'scale(1.15)' : 'scale(1)',
+            transition: 'all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+            filter: ccfHovered ? 'brightness(1.1)' : 'none'
+          }}
+          title={data.locale === 'en' ? 'Click to navigate to CCF Group' : 'クリックでCCFデータベースへ移動'}
+        >
           CCF
         </div>
       )}
+
+      {/* Indicator Container (Top-Left Stacking) */}
+      <div style={{
+        position: 'absolute',
+        top: -10,
+        left: -10,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '4px',
+        zIndex: 30,
+        alignItems: 'flex-start'
+      }}>
+        {/* Flag Badge */}
+        {!!data.isFlagged && (
+          <div 
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(new CustomEvent('app-navigate', {
+                detail: { viewMode: 'data', tab: 'flags', targetId: data.eventId || props.id }
+              }));
+            }}
+            onMouseEnter={() => setFlagHovered(true)}
+            onMouseLeave={() => setFlagHovered(false)}
+            style={{
+              background: data.flagState ? 'var(--accent-red)' : 'var(--accent-green)',
+              color: '#fff',
+              fontSize: '9px',
+              fontWeight: 'bold',
+              padding: '2px 6px',
+              borderRadius: '10px',
+              boxShadow: flagHovered ? 'var(--shadow-lg)' : 'var(--shadow-md)',
+              zIndex: 30,
+              border: '2px solid var(--bg-elevated)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+              transform: flagHovered ? 'scale(1.15)' : 'scale(1)',
+              transition: 'all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              filter: flagHovered ? 'brightness(1.1)' : 'none'
+            }}
+            title={data.locale === 'en' ? 'Click to navigate to Flag settings' : 'クリックでフラグ設定へ移動'}
+          >
+            {data.flagState ? '🏳️ TRUE' : '🚩 FALSE'}
+          </div>
+        )}
+
+        {/* Recovery Badge */}
+        {!!data.isRecovery && (
+          <div 
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(new CustomEvent('app-navigate', {
+                detail: { viewMode: 'data', tab: 'recovery', targetId: props.id }
+              }));
+            }}
+            onMouseEnter={() => setRecHovered(true)}
+            onMouseLeave={() => setRecHovered(false)}
+            style={{
+              background: 'var(--accent-blue)',
+              color: '#fff',
+              fontSize: '9px',
+              fontWeight: 'bold',
+              padding: '2px 6px',
+              borderRadius: '10px',
+              boxShadow: recHovered ? 'var(--shadow-lg)' : 'var(--shadow-md)',
+              zIndex: 30,
+              border: '2px solid var(--bg-elevated)',
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+              transform: recHovered ? 'scale(1.15)' : 'scale(1)',
+              transition: 'all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              filter: recHovered ? 'brightness(1.1)' : 'none'
+            }}
+            title={data.locale === 'en' ? 'Click to navigate to Recovery rules' : 'クリックでリカバリルールへ移動'}
+          >
+            🩹 REC
+          </div>
+        )}
+      </div>
 
       {/* Output Handle (to children) */}
       {isGate && (

@@ -6,7 +6,7 @@ import type { CCFGroup } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
 import { useTableSort } from '@/lib/hooks/useTableSort';
 
-export default function CCFGroupTable({ locale = 'ja' }: { locale?: 'ja' | 'en' }) {
+export default function CCFGroupTable({ locale = 'ja', highlightedId }: { locale?: 'ja' | 'en'; highlightedId?: string | null }) {
   const model = useModelStore((s) => s.model);
   const addCCFGroup = useModelStore((s) => s.addCCFGroup);
   const updateCCFGroup = useModelStore((s) => s.updateCCFGroup);
@@ -92,8 +92,17 @@ export default function CCFGroupTable({ locale = 'ja' }: { locale?: 'ja' | 'en' 
             </tr>
           </thead>
           <tbody>
-            {filteredGroups.map((g) => (
-              <tr key={g.id}>
+            {filteredGroups.map((g) => {
+              const isHighlighted = highlightedId ? (
+                g.id === highlightedId ||
+                g.members.includes(highlightedId) ||
+                g.members.some(m => model.basicEvents.find(be => be.id === m)?.eventId === highlightedId)
+              ) : false;
+              return (
+                <tr key={g.id} style={{ 
+                  background: isHighlighted ? 'rgba(234, 179, 8, 0.15)' : 'transparent',
+                  transition: 'background 0.3s ease'
+                }}>
                 <td>
                   <input
                     className="form-input"
@@ -193,7 +202,8 @@ export default function CCFGroupTable({ locale = 'ja' }: { locale?: 'ja' | 'en' 
                   </button>
                 </td>
               </tr>
-            ))}
+            );
+          })}
             {filteredGroups.length === 0 && (
               <tr>
                 <td colSpan={5} style={{ textAlign: 'center', padding: 'var(--space-xl)', color: 'var(--text-tertiary)' }}>

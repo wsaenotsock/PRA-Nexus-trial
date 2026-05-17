@@ -22,6 +22,17 @@ self.onmessage = async (e: MessageEvent) => {
         const ft = (model.faultTrees || []).find((f: any) => f.id === targetId);
         if (!ft) throw new Error(`Fault Tree not found: ${targetId}`);
         
+        // Prepare Flag Map for Logical Pruning
+        const flagMap = new Map<string, boolean>();
+        if (model.activeFlagGroupId) {
+          const flagGroup = (model.flagGroups || []).find((fg: any) => fg.id === model.activeFlagGroupId);
+          if (flagGroup && flagGroup.items) {
+            flagGroup.items.forEach((item: any) => {
+              flagMap.set(item.eventId, item.state);
+            });
+          }
+        }
+
         const cutoffValue = model.quantificationSettings?.cutOff ?? 1e-20;
         const maxCutsetsValue = model.quantificationSettings?.maxCutsets ?? 100000;
         const approxSetting = model.quantificationSettings?.approximation;
@@ -36,7 +47,8 @@ self.onmessage = async (e: MessageEvent) => {
           model.faultTrees || [],
           cutoffValue,
           maxCutsetsValue,
-          approxMethod
+          approxMethod,
+          flagMap
         );
         res.cutoff = cutoffValue;
         res.bddCutOff = model.quantificationSettings?.bddCutOff ?? 1e-20;

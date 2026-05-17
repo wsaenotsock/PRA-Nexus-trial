@@ -15,6 +15,8 @@ import InitiatingEventTable from '@/components/data/InitiatingEventTable';
 import EndStateTable from '@/components/data/EndStateTable';
 import FaultTreeTable from '@/components/data/FaultTreeTable';
 import EventTreeTable from '@/components/data/EventTreeTable';
+import FlagGroupTable from '@/components/data/FlagGroupTable';
+import RecoveryRuleTable from '@/components/data/RecoveryRuleTable';
 import SeismicDashboard from '@/components/seismic/SeismicDashboard';
 import QuantificationPanel from '@/components/results/QuantificationPanel';
 import ProjectManager from '@/components/project/ProjectManager';
@@ -35,7 +37,7 @@ type Locale = 'ja' | 'en';
 export default function Home() {
   const [viewMode, setViewMode] = useState<ViewMode>('editor');
   const [editorType, setEditorType] = useState<'FT' | 'ET'>('FT');
-  const [dataViewTab, setDataViewTab] = useState<'faultTrees' | 'eventTrees' | 'basicEvents' | 'parameters' | 'ccf' | 'initiatingEvents' | 'endStates'>('basicEvents');
+  const [dataViewTab, setDataViewTab] = useState<'faultTrees' | 'eventTrees' | 'basicEvents' | 'parameters' | 'ccf' | 'initiatingEvents' | 'endStates' | 'flags' | 'recovery'>('basicEvents');
   const [locale, setLocale] = useState<Locale>('ja');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [selectedNodeType, setSelectedNodeType] = useState<string | null>(null);
@@ -135,6 +137,26 @@ export default function Home() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [saveToLocalStorage, undo, redo, past.length, future.length]);
+  // Handle cross-component navigation events (e.g. from canvas badges to database tables)
+  useEffect(() => {
+    const handleNavigate = (e: Event) => {
+      const customEvent = e as CustomEvent<{ viewMode: ViewMode; tab?: typeof dataViewTab; targetId?: string }>;
+      if (customEvent && customEvent.detail) {
+        const { viewMode: newViewMode, tab, targetId } = customEvent.detail;
+        setViewMode(newViewMode);
+        if (tab) {
+          setDataViewTab(tab);
+        }
+        if (targetId) {
+          setHighlightedEntityId(targetId);
+          setTimeout(() => setHighlightedEntityId(null), 3000);
+        }
+      }
+    };
+    window.addEventListener('app-navigate', handleNavigate);
+    return () => window.removeEventListener('app-navigate', handleNavigate);
+  }, []);
+
   const loadFromLocalStorage = useModelStore((s) => s.loadFromLocalStorage);
   const removeGate = useModelStore((s) => s.removeGate);
   const removeBasicEvent = useModelStore((s) => s.removeBasicEvent);
@@ -547,14 +569,13 @@ export default function Home() {
         <div 
           className="app-header__logo" 
           onClick={() => window.open('/pitch', '_blank')}
-          style={{ cursor: 'pointer' }}
+          style={{ cursor: 'pointer', paddingLeft: '12px' }}
           title={locale === 'ja' ? 'Quantica Riskの詳細を見る (新しいタブ)' : 'View Quantica Risk Details (New Tab)'}
         >
-          <div className="app-header__logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', background: 'none', border: 'none', boxShadow: 'none', marginRight: '4px' }}>
-            <QuanticaLogo size={26} />
+          <div className="app-header__logo-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '40px', width: 'auto', background: 'none', border: 'none', boxShadow: 'none' }}>
+            <QuanticaLogo theme={theme} style={{ height: '40px' }} />
           </div>
-          <span className="app-header__title">Quantica Risk</span>
-          <span className="app-header__subtitle">
+          <span className="app-header__subtitle" style={{ marginLeft: '12px', borderLeft: '1px solid var(--border-default)', paddingLeft: '12px' }}>
             {locale === 'ja' ? '静的PRA解析' : 'Static PRA Analysis'}
           </span>
           {isComputing && (
@@ -1037,6 +1058,12 @@ export default function Home() {
                 <button className={`tab ${dataViewTab === 'endStates' ? 'tab--active' : ''}`} onClick={() => setDataViewTab('endStates')}>
                   {locale === 'ja' ? '終状態データベース' : 'End States'}
                 </button>
+                <button className={`tab ${dataViewTab === 'flags' ? 'tab--active' : ''}`} onClick={() => setDataViewTab('flags')}>
+                  🚩 {locale === 'ja' ? 'フラグ設定' : 'Flags'}
+                </button>
+                <button className={`tab ${dataViewTab === 'recovery' ? 'tab--active' : ''}`} onClick={() => setDataViewTab('recovery')}>
+                  🩹 {locale === 'ja' ? 'リカバリールール' : 'Recovery Rules'}
+                </button>
               </div>
             </div>
             <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -1045,8 +1072,10 @@ export default function Home() {
               {dataViewTab === 'basicEvents' && <BasicEventTable locale={locale} highlightedId={highlightedEntityId} onNavigateToFT={(ftId, nodeId) => { selectFaultTree(ftId); setEditorType('FT'); setViewMode('editor'); if (nodeId) { setSelectedNodeId(nodeId); setSelectedNodeType('basicEvent'); } }} />}
               {dataViewTab === 'initiatingEvents' && <InitiatingEventTable locale={locale} />}
               {dataViewTab === 'parameters' && <ParameterTable locale={locale} />}
-              {dataViewTab === 'ccf' && <CCFGroupTable locale={locale} />}
+              {dataViewTab === 'ccf' && <CCFGroupTable locale={locale} highlightedId={highlightedEntityId} />}
               {dataViewTab === 'endStates' && <EndStateTable locale={locale} />}
+              {dataViewTab === 'flags' && <FlagGroupTable locale={locale} highlightedId={highlightedEntityId} />}
+              {dataViewTab === 'recovery' && <RecoveryRuleTable locale={locale} highlightedId={highlightedEntityId} />}
             </div>
           </div>
         )}

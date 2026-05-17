@@ -163,8 +163,29 @@ export function buildBDD(
   visitedTrees: Set<string> = new Set(),
   gateMemoMap: Map<string, BDDNode> = new Map(),
   cutoff?: number,
-  probMemoMap: Map<string, number> = new Map()
+  probMemoMap: Map<string, number> = new Map(),
+  flagMap: Map<string, boolean> = new Map()
 ): BDDNode {
+  // Check for Flag Override first
+  let hasFlag = flagMap.has(gateId);
+  let flagVal = false;
+  if (hasFlag) {
+    flagVal = flagMap.get(gateId)!;
+  } else {
+    const foundBe = basicEvents.find((e) => e.id === gateId);
+    if (foundBe) {
+      const beAny = foundBe as any;
+      if (beAny.eventId && flagMap.has(beAny.eventId)) {
+        hasFlag = true;
+        flagVal = flagMap.get(beAny.eventId)!;
+      }
+    }
+  }
+
+  if (hasFlag) {
+    return flagVal ? TRUE_NODE : FALSE_NODE;
+  }
+
   // Early-Exit Conservative Probability Pruning
   if (cutoff !== undefined && cutoff > 0) {
     const maxP = getConservativeMaxProb(gateId, gates, basicEvents, allFaultTrees, probMemoMap);
@@ -189,7 +210,7 @@ export function buildBDD(
         if (linkedFT && !visitedTrees.has(linkedFT.id)) {
           const newVisited = new Set(visitedTrees);
           newVisited.add(linkedFT.id);
-          const res = buildBDD(linkedFT.topGateId, linkedFT.gates, basicEvents, variableOrder, allFaultTrees, newVisited, gateMemoMap, cutoff, probMemoMap);
+          const res = buildBDD(linkedFT.topGateId, linkedFT.gates, basicEvents, variableOrder, allFaultTrees, newVisited, gateMemoMap, cutoff, probMemoMap, flagMap);
           gateMemoMap.set(gateId, res);
           return res;
         }
@@ -207,7 +228,7 @@ export function buildBDD(
     if (linkedFT && !visitedTrees.has(linkedFT.id)) {
       const newVisited = new Set(visitedTrees);
       newVisited.add(linkedFT.id);
-      const res = buildBDD(linkedFT.topGateId, linkedFT.gates, basicEvents, variableOrder, allFaultTrees, newVisited, gateMemoMap, cutoff, probMemoMap);
+      const res = buildBDD(linkedFT.topGateId, linkedFT.gates, basicEvents, variableOrder, allFaultTrees, newVisited, gateMemoMap, cutoff, probMemoMap, flagMap);
       gateMemoMap.set(gateId, res);
       return res;
     }
@@ -216,7 +237,7 @@ export function buildBDD(
 
   // Build BDD for each child, passing along the map
   const childBDDs = gate.children.map((childId) => {
-    return buildBDD(childId, gates, basicEvents, variableOrder, allFaultTrees, visitedTrees, gateMemoMap, cutoff, probMemoMap);
+    return buildBDD(childId, gates, basicEvents, variableOrder, allFaultTrees, visitedTrees, gateMemoMap, cutoff, probMemoMap, flagMap);
   });
 
   if (childBDDs.length === 0) {
@@ -552,14 +573,15 @@ export function siftingOptimize(
   gates: Gate[],
   basicEvents: BasicEvent[],
   initialOrder: string[],
-  allFaultTrees: FaultTree[] = []
+  allFaultTrees: FaultTree[] = [],
+  flagMap: Map<string, boolean> = new Map()
 ): { bestOrder: string[]; bestRoot: BDDNode } {
   let bestOrder = [...initialOrder];
   
   // Set initial variable order map and build BDD
   setVariableOrderMap(bestOrder);
   resetBDD();
-  let bestRoot = buildBDD(topGateId, gates, basicEvents, bestOrder, allFaultTrees);
+  let bestRoot = buildBDD(topGateId, gates, basicEvents, bestOrder, allFaultTrees, new Set(), new Map(), undefined, new Map(), flagMap);
   let minNodeCount = nodeCounter;
 
   // Skip optimization for very small or very large trees to save computation time/memory
@@ -595,7 +617,7 @@ export function siftingOptimize(
       // Rebuild and evaluate node count
       setVariableOrderMap(tempOrder);
       resetBDD();
-      const tempRoot = buildBDD(topGateId, gates, basicEvents, tempOrder, allFaultTrees);
+      const tempRoot = buildBDD(topGateId, gates, basicEvents, tempOrder, allFaultTrees, new Set(), new Map(), undefined, new Map(), flagMap);
       const tempNodeCount = nodeCounter;
 
       if (tempNodeCount < minNodeCount && tempNodeCount > 0) {
@@ -610,7 +632,7 @@ export function siftingOptimize(
   // Restore the best state
   setVariableOrderMap(bestOrder);
   resetBDD();
-  bestRoot = buildBDD(topGateId, gates, basicEvents, bestOrder, allFaultTrees);
+  bestRoot = buildBDD(topGateId, gates, basicEvents, bestOrder, allFaultTrees, new Set(), new Map(), undefined, new Map(), flagMap);
 
   return { bestOrder, bestRoot };
 }
@@ -680,7 +702,8 @@ export function quantifyFaultTree(
   allFaultTrees: FaultTree[] = [],
   cutoff: number = 1e-15,
   maxCutsets: number = 100000,
-  method: 'bdd_exact' | 'rare_event' | 'mcub' = 'bdd_exact'
+  method: 'bdd_exact' | 'rare_event' | 'mcub' = 'bdd_exact',
+  flagMap: Map<string, boolean> = new Map()
 ): QuantificationResult {
   const startTime = performance.now();
 
@@ -709,6 +732,25 @@ export function quantifyFaultTree(
         ? be.failureRate * (be.demands ?? 1)
         : be.failureRate * (be.missionTime ?? 24);
     }
+
+    // Apply Flag Override if active
+    let isFlagOverridden = false;
+    let flagState = false;
+    if (flagMap.has(be.id)) {
+      isFlagOverridden = true;
+      flagState = flagMap.get(be.id)!;
+    } else {
+      const beAny = be as any;
+      if (beAny.eventId && flagMap.has(beAny.eventId)) {
+        isFlagOverridden = true;
+        flagState = flagMap.get(beAny.eventId)!;
+      }
+    }
+
+    if (isFlagOverridden) {
+      p = flagState ? 1.0 : 0.0;
+    }
+
     probabilities.set(be.id, Math.min(p, 1));
   }
 
@@ -849,7 +891,8 @@ export function quantifyFaultTree(
     faultTree.gates,
     basicEvents,
     variableOrder,
-    allFaultTrees
+    allFaultTrees,
+    flagMap
   );
 
   // Calculate exact probability

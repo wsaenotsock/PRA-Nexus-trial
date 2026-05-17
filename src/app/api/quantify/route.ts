@@ -45,6 +45,19 @@ export async function POST(request: Request) {
       return setting || 'bdd_exact';
     };
 
+    const getFlagMap = (model: any) => {
+      const flagMap = new Map<string, boolean>();
+      if (model && model.activeFlagGroupId) {
+        const flagGroup = (model.flagGroups || []).find((fg: any) => fg.id === model.activeFlagGroupId);
+        if (flagGroup && flagGroup.items) {
+          flagGroup.items.forEach((item: any) => {
+            flagMap.set(item.eventId, item.state);
+          });
+        }
+      }
+      return flagMap;
+    };
+
     if (!type) {
       return addCorsHeaders(NextResponse.json({ error: 'Missing calculation type' }, { status: 400 }));
     }
@@ -69,7 +82,8 @@ export async function POST(request: Request) {
           model.faultTrees || [],
           cutoffValue,
           maxCutsetsValue,
-          approxMethod
+          approxMethod,
+          getFlagMap(model)
         );
         res.cutoff = cutoffValue;
         const finalRes = { ...res, isFaultTree: true, targetId } as any;
@@ -118,7 +132,8 @@ export async function POST(request: Request) {
             model.faultTrees || [],
             model.quantificationSettings?.cutOff ?? 1e-15,
             model.quantificationSettings?.maxCutsets ?? 100000,
-            getSingularApproxMethod(model)
+            getSingularApproxMethod(model),
+            getFlagMap(model)
           );
         } else {
           const et = (model.eventTrees || []).find((e: any) => e.id === currentResult.targetId);
@@ -185,7 +200,8 @@ export async function POST(request: Request) {
             model.faultTrees || [],
             model.quantificationSettings?.cutOff ?? 1e-15,
             model.quantificationSettings?.maxCutsets ?? 100000,
-            getSingularApproxMethod(model)
+            getSingularApproxMethod(model),
+            getFlagMap(model)
           );
         } else {
           const et = (model.eventTrees || []).find((e: any) => e.id === currentResult.targetId);

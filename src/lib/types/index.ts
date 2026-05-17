@@ -138,6 +138,32 @@ export interface InitiatingEvent {
   linkedFaultTreeId?: string;
 }
 
+// ===== Flag Systems (Logical Pruning) =====
+export interface FlagItem {
+  eventId: string;
+  state: boolean; // TRUE (1) or FALSE (0)
+}
+
+export interface FlagGroup {
+  id: string;
+  name: string;
+  items: FlagItem[];
+}
+
+// ===== Recovery Rules (Post-processing) =====
+export type RecoveryAction = 'add' | 'remove' | 'replace' | 'set_probability';
+
+export interface RecoveryRule {
+  id: string;
+  name: string;
+  description?: string;
+  condition: string[]; // Match criteria: all eventIds must be present in the cutset
+  action: RecoveryAction;
+  targetEventId?: string; // Event to add or replace with
+  probability?: number; // For 'set_probability' or custom recovery events
+  priority: number; // Order of application
+}
+
 // ===== CCF Group =====
 export interface CCFGroup {
   id: string;
@@ -224,6 +250,9 @@ export interface PRAModel {
   seismicFragilities: SeismicFragility[];
   seismicSettings: SeismicSettings;
   quantificationSettings: GlobalQuantificationSettings;
+  flagGroups: FlagGroup[];
+  recoveryRules: RecoveryRule[];
+  activeFlagGroupId?: string;
 }
 
 // ===== Quantification Results =====
@@ -304,6 +333,7 @@ export interface QuantificationResult {
   cutoff?: number;
   bddCutOff?: number;
   enablePruning?: boolean;
+  appliedRecoveryCount?: number;
 }
 
 // ===== Editor Node Types (React Flow) =====
@@ -318,4 +348,8 @@ export interface FTNodeData extends Record<string, unknown> {
   linkedTreeId?: string;  // For transfer gates
   probability?: number;
   failureType?: 'time' | 'demand';
+  isFlagged?: boolean;
+  flagState?: boolean;
+  isRecovery?: boolean;
+  isCCF?: boolean;
 }
