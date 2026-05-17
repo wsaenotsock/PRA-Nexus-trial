@@ -723,6 +723,21 @@ export default function Home() {
             {t.projectManager}
           </button>
 
+          <div className="toolbar__separator" />
+
+          {/* PRA Episteme Link */}
+          <a
+            href="https://pra-episteme.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn--ghost"
+            title="PRA Knowledge Intelligence Platform"
+            style={{ fontWeight: 600, color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <span style={{ fontSize: '16px' }}>🧠</span> 
+            {locale === 'ja' ? 'Episteme 連携' : 'PRA Episteme'}
+          </a>
+
           {/* Model Export / Import */}
           <button
             className="btn btn--secondary"
